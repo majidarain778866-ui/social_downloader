@@ -2585,6 +2585,8 @@
         // Parse downloads array (Rich Netlify API)
         if (Array.isArray(data.downloads) && data.downloads.length > 0) {
           data.downloads.forEach(d => {
+            const dl = d.download_url ? (d.download_url.startsWith('http') ? d.download_url : `${BACKEND_BASE_URL}${d.download_url}`) : `${DOWNLOAD_ENDPOINT}?id=${encodeURIComponent(d.id)}`;
+            const prev = d.preview_url ? (d.preview_url.startsWith('http') ? d.preview_url : `${BACKEND_BASE_URL}${d.preview_url}`) : `${dl}&preview=1`;
             allFormats.push({
               id: d.id,
               label: d.label || d.resolution || 'Video',
@@ -2593,13 +2595,14 @@
               badge: d.badge || (d.type === 'audio' ? 'AUDIO MP3' : d.type === 'image' ? 'THUMBNAIL' : 'AUDIO INCLUDED'),
               extension: d.extension || 'mp4',
               size: d.size || (d.filesize ? formatBytes(d.filesize) : ''),
-              downloadUrl: d.download_url ? (d.download_url.startsWith('http') ? d.download_url : `${BACKEND_BASE_URL}${d.download_url}`) : `${DOWNLOAD_ENDPOINT}?id=${encodeURIComponent(d.id)}`
+              downloadUrl: dl,
+              previewUrl: prev
             });
           });
         }
 
-        // Parse audio object (Classic Netlify API)
-        if (data.audio && (data.audio.id || data.audio.url)) {
+        // Parse audio object (Classic Netlify API) if not already present
+        if (!allFormats.some(f => f.type === 'audio') && data.audio && (data.audio.id || data.audio.url)) {
           const aId = data.audio.id || 'audio_mp3';
           const aSize = data.audio.filesize ? formatBytes(data.audio.filesize) : (data.audio.size || '');
           const aUrl = data.audio.url ? data.audio.url : `${DOWNLOAD_ENDPOINT}?id=${encodeURIComponent(aId)}`;
@@ -2611,12 +2614,13 @@
             badge: 'AUDIO MP3',
             extension: 'mp3',
             size: aSize,
-            downloadUrl: aUrl
+            downloadUrl: aUrl,
+            previewUrl: `${aUrl}&preview=1`
           });
         }
 
-        // Parse thumbnail HD as Image option
-        if (thumbnail) {
+        // Parse thumbnail HD as Image option if not already present
+        if (!allFormats.some(f => f.type === 'image') && thumbnail) {
           allFormats.push({
             id: 'thumb_hd',
             label: 'Thumbnail HD',
@@ -2625,7 +2629,8 @@
             badge: 'THUMBNAIL',
             extension: 'jpg',
             size: '',
-            downloadUrl: thumbnail
+            downloadUrl: thumbnail,
+            previewUrl: thumbnail
           });
         }
 

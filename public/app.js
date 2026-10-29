@@ -35,13 +35,117 @@ const creatorLink = document.querySelector("#creator-link");
 const outputSummary = document.querySelector("#output-summary");
 const filterButtons = document.querySelectorAll(".filter-chip");
 const bottomNavLinks = document.querySelectorAll(".bottom-app-nav a");
+const themeToggleBtn = document.querySelector("#theme-toggle-btn");
+const themeIcon = document.querySelector("#theme-icon");
+const btnClearUrl = document.querySelector("#btn-clear-url");
+const btnPasteUrl = document.querySelector("#btn-paste-url");
+const platformChips = document.querySelectorAll(".platform-chip");
 
 const pageKey = document.documentElement.dataset.pageKey?.includes("__") ? "home" : document.documentElement.dataset.pageKey || "home";
 const configuredApiBase = String(window.SOCIAL_DOWNLOADER_API_BASE || "").replace(/\/+$/, "");
 let loaderTimer = null;
 let activeFilter = "all";
 let currentDownloads = [];
-const brandSuffix = "getintodevice.com";
+const brandSuffix = "Social Downloader";
+
+// Theme Manager (Light & Dark Mode)
+const getPreferredTheme = () => {
+  const saved = localStorage.getItem("sd_theme");
+  if (saved === "light" || saved === "dark") return saved;
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+};
+
+const applyTheme = (theme) => {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("sd_theme", theme);
+  if (themeIcon) {
+    themeIcon.textContent = theme === "light" ? "dark_mode" : "light_mode";
+  }
+  if (themeToggleBtn) {
+    themeToggleBtn.setAttribute(
+      "aria-label",
+      theme === "light" ? "Switch to dark mode" : "Switch to light mode"
+    );
+    themeToggleBtn.setAttribute(
+      "title",
+      theme === "light" ? "Switch to dark mode" : "Switch to light mode"
+    );
+  }
+};
+
+const initTheme = () => {
+  const current = getPreferredTheme();
+  applyTheme(current);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", () => {
+      const active = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = active === "light" ? "dark" : "light";
+      applyTheme(next);
+    });
+  }
+
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", (e) => {
+    if (!localStorage.getItem("sd_theme")) {
+      applyTheme(e.matches ? "light" : "dark");
+    }
+  });
+};
+
+const initInputEnhancements = () => {
+  if (input && btnClearUrl) {
+    const updateClearBtn = () => {
+      btnClearUrl.style.display = input.value.trim().length > 0 ? "inline-flex" : "none";
+    };
+
+    input.addEventListener("input", updateClearBtn);
+    input.addEventListener("change", updateClearBtn);
+    updateClearBtn();
+
+    btnClearUrl.addEventListener("click", () => {
+      input.value = "";
+      updateClearBtn();
+      input.focus();
+      setStatus("");
+    });
+  }
+
+  if (btnPasteUrl && input) {
+    btnPasteUrl.addEventListener("click", async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text && text.trim().startsWith("http")) {
+            input.value = text.trim();
+            if (btnClearUrl) btnClearUrl.style.display = "inline-flex";
+            setStatus("📋 Link pasted! Click Download to analyze.");
+            input.focus();
+          } else {
+            setStatus("Please copy a valid video URL first.", true);
+          }
+        } else {
+          input.focus();
+          setStatus("Press Ctrl+V to paste your link.");
+        }
+      } catch (err) {
+        input.focus();
+        setStatus("Paste permission not granted. Use Ctrl+V or Cmd+V to paste.");
+      }
+    });
+  }
+
+  if (platformChips && platformChips.length) {
+    platformChips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        input.focus();
+        input.placeholder = `Paste ${chip.textContent.trim()} link here...`;
+      });
+    });
+  }
+};
+
+initTheme();
+initInputEnhancements();
 
 const apiUrl = (path) => `${configuredApiBase}${path}`;
 
@@ -101,12 +205,38 @@ const finishProcessLoader = () => {
 };
 
 const setLoading = (isLoading, heading = "Analyzing link...", detail = "Preparing download options") => {
-  button.disabled = isLoading;
-  input.disabled = isLoading;
-  loader.hidden = !isLoading;
+  if (button) {
+    button.disabled = isLoading;
+    if (isLoading) {
+      button.classList.add("loading");
+      if (!button.dataset.originalHtml) {
+        button.dataset.originalHtml = button.innerHTML;
+      }
+      button.innerHTML = `<span class="material-symbols-outlined btn-icon spinner-icon">progress_activity</span><span>Fetching...</span>`;
+    } else {
+      button.classList.remove("loading");
+      if (button.dataset.originalHtml) {
+        button.innerHTML = button.dataset.originalHtml;
+      }
+    }
+  }
+
+  if (input) {
+    input.disabled = isLoading;
+  }
+
+  if (loader) {
+    loader.hidden = !isLoading;
+    if (isLoading) {
+      loader.removeAttribute("hidden");
+    } else {
+      loader.setAttribute("hidden", "");
+    }
+  }
+
   if (isLoading) {
-    loaderTitle.textContent = heading;
-    loaderDetail.textContent = detail;
+    if (loaderTitle) loaderTitle.textContent = heading;
+    if (loaderDetail) loaderDetail.textContent = detail;
   } else {
     clearInterval(loaderTimer);
   }
@@ -219,12 +349,134 @@ const selectPreviewItem = (data, downloads) => {
   );
 };
 
+let activePreviewItem = null;
+const previewSpinner = document.querySelector("#preview-loading-spinner");
+const showPreviewSpinner = (show) => {
+  if (previewSpinner) previewSpinner.style.display = show ? "flex" : "none";
+};
+
+// Preview Modal Elements
+const previewModal = document.querySelector("#preview-modal");
+const previewModalBackdrop = document.querySelector("#preview-modal-backdrop");
+const previewModalClose = document.querySelector("#preview-modal-close");
+const previewModalTitle = document.querySelector("#preview-modal-title");
+const previewModalBadge = document.querySelector("#preview-modal-badge");
+const previewModalVideo = document.querySelector("#preview-modal-video");
+const previewModalAudio = document.querySelector("#preview-modal-audio");
+const previewModalImg = document.querySelector("#preview-modal-img");
+const previewModalLoader = document.querySelector("#preview-modal-loader");
+const previewModalDownloadBtn = document.querySelector("#preview-modal-download-btn");
+
+const closePreviewModal = () => {
+  if (!previewModal) return;
+  previewModal.hidden = true;
+  previewModal.setAttribute("aria-hidden", "true");
+  if (previewModalVideo) {
+    previewModalVideo.pause();
+    previewModalVideo.removeAttribute("src");
+    previewModalVideo.hidden = true;
+  }
+  if (previewModalAudio) {
+    previewModalAudio.pause();
+    previewModalAudio.removeAttribute("src");
+    previewModalAudio.hidden = true;
+  }
+  if (previewModalImg) {
+    previewModalImg.removeAttribute("src");
+    previewModalImg.hidden = true;
+  }
+  if (previewModalLoader) previewModalLoader.style.display = "none";
+  document.body.style.overflow = "";
+};
+
+const openPreviewModal = (item) => {
+  if (!previewModal || !item) return;
+  closePreviewModal();
+
+  const isVideo = (item.type || "video") === "video";
+  const isAudio = item.type === "audio";
+  const isImage = item.type === "image";
+
+  if (previewModalTitle) {
+    previewModalTitle.textContent = item.label || item.resolution || "Media Preview";
+  }
+  if (previewModalBadge) {
+    previewModalBadge.textContent = item.badge || item.resolution || "Asset";
+    previewModalBadge.className = `asset-badge asset-${item.type || "video"}`;
+  }
+  if (previewModalDownloadBtn) {
+    previewModalDownloadBtn.href = assetUrl(item.download_url || `/api/download?id=${encodeURIComponent(item.id)}`);
+    previewModalDownloadBtn.setAttribute("data-download-id", item.id || "");
+    previewModalDownloadBtn.setAttribute("data-filename", brandedDownloadName(
+      `${title?.textContent || "social-download"}-${item.resolution || "asset"}`,
+      item.extension
+    ));
+  }
+
+  const mediaSrc = assetUrl(item.preview_url || item.download_url);
+  if (previewModalLoader) previewModalLoader.style.display = "flex";
+
+  if (isVideo && previewModalVideo) {
+    previewModalVideo.hidden = false;
+    previewModalVideo.src = mediaSrc;
+    previewModalVideo.load();
+    previewModalVideo.oncanplay = () => {
+      if (previewModalLoader) previewModalLoader.style.display = "none";
+    };
+    previewModalVideo.onerror = () => {
+      if (previewModalLoader) previewModalLoader.style.display = "none";
+    };
+    previewModalVideo.play().catch(() => {});
+  } else if (isAudio && previewModalAudio) {
+    previewModalAudio.hidden = false;
+    previewModalAudio.src = mediaSrc;
+    previewModalAudio.load();
+    previewModalAudio.oncanplay = () => {
+      if (previewModalLoader) previewModalLoader.style.display = "none";
+    };
+    previewModalAudio.onerror = () => {
+      if (previewModalLoader) previewModalLoader.style.display = "none";
+    };
+    previewModalAudio.play().catch(() => {});
+  } else if (isImage && previewModalImg) {
+    previewModalImg.hidden = false;
+    previewModalImg.src = mediaSrc;
+    previewModalImg.onload = () => {
+      if (previewModalLoader) previewModalLoader.style.display = "none";
+    };
+    previewModalImg.onerror = () => {
+      if (previewModalLoader) previewModalLoader.style.display = "none";
+    };
+  }
+
+  previewModal.hidden = false;
+  previewModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+};
+
+if (previewModalClose) {
+  previewModalClose.addEventListener("click", closePreviewModal);
+}
+if (previewModalBackdrop) {
+  previewModalBackdrop.addEventListener("click", closePreviewModal);
+}
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && previewModal && !previewModal.hidden) {
+    closePreviewModal();
+  }
+});
+
 const renderSmartPreview = (data, downloads) => {
   const previewItem = selectPreviewItem(data, downloads);
+  activePreviewItem = previewItem;
+  const previewContainer = document.querySelector("#preview-media-container") || document.querySelector(".preview-media");
+  if (previewContainer) previewContainer.classList.remove("is-playing");
+  showPreviewSpinner(false);
 
-  // ALWAYS show thumbnail immediately — it loads fast from CDN
+  // ALWAYS show thumbnail immediately — loads fast from CDN
   smartPreview.hidden = true;
   smartPreview.removeAttribute("src");
+  smartPreview.pause();
   thumbnail.src = "";
   thumbnail.hidden = true;
 
@@ -234,33 +486,96 @@ const renderSmartPreview = (data, downloads) => {
     thumbnail.onerror = () => { thumbnail.hidden = true; };
   }
 
-  // Lazy-load video preview AFTER thumbnail is shown
+  const playBtn = document.querySelector("#preview-play-btn");
+  if (playBtn) {
+    const isVideo = previewItem?.type === "video";
+    playBtn.style.display = isVideo ? "flex" : (data.thumbnail ? "none" : "flex");
+  }
+
+  // Pre-assign video source for instant click play
   if (previewItem?.type === "video" && previewItem.preview_url) {
-    // Small delay so thumbnail renders first, then video fades in
-    setTimeout(() => {
-      const videoSrc = assetUrl(previewItem.preview_url);
-      smartPreview.src = videoSrc;
-      smartPreview.hidden = false;
-      // When video loads, show it alongside thumbnail (or replace if large)
-      smartPreview.addEventListener(
-        "loadedmetadata",
-        () => {
-          // Keep thumbnail visible, just also show video
-          smartPreview.hidden = false;
-        },
-        { once: true }
-      );
-      smartPreview.addEventListener(
-        "error",
-        () => {
-          smartPreview.hidden = true;
-          thumbnail.hidden = !data.thumbnail;
-        },
-        { once: true }
-      );
-    }, 100);
+    const videoSrc = assetUrl(previewItem.preview_url);
+    smartPreview.src = videoSrc;
+    smartPreview.load();
   }
 };
+
+// Wire up interactive click on preview media box
+const previewContainer = document.querySelector("#preview-media-container") || document.querySelector(".preview-media");
+if (previewContainer) {
+  previewContainer.addEventListener("click", (e) => {
+    // If click was on video control element itself when already playing, let native controls handle it
+    if (e.target === smartPreview && !smartPreview.paused) return;
+
+    if (!smartPreview) return;
+    const currentSrc = smartPreview.getAttribute("src") || smartPreview.src;
+    if (!currentSrc && activePreviewItem?.preview_url) {
+      smartPreview.src = assetUrl(activePreviewItem.preview_url);
+      smartPreview.load();
+    }
+
+    if (smartPreview.src) {
+      if (smartPreview.paused) {
+        showPreviewSpinner(true);
+        smartPreview.hidden = false;
+        smartPreview.play().then(() => {
+          showPreviewSpinner(false);
+          previewContainer.classList.add("is-playing");
+        }).catch((err) => {
+          console.warn("Inline play error:", err);
+          showPreviewSpinner(false);
+          // If inline playback fails, open sleek interactive modal preview
+          if (activePreviewItem) {
+            openPreviewModal(activePreviewItem);
+          }
+        });
+      } else {
+        smartPreview.pause();
+        previewContainer.classList.remove("is-playing");
+      }
+    } else if (thumbnail && thumbnail.src && !thumbnail.hidden) {
+      if (activePreviewItem) {
+        openPreviewModal(activePreviewItem);
+      } else {
+        window.open(thumbnail.src, "_blank", "noopener,noreferrer");
+      }
+    }
+  });
+
+  previewContainer.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      previewContainer.click();
+    }
+  });
+
+  smartPreview.addEventListener("waiting", () => {
+    showPreviewSpinner(true);
+  });
+  smartPreview.addEventListener("canplay", () => {
+    showPreviewSpinner(false);
+  });
+  smartPreview.addEventListener("playing", () => {
+    showPreviewSpinner(false);
+    previewContainer.classList.add("is-playing");
+  });
+  smartPreview.addEventListener("play", () => {
+    previewContainer.classList.add("is-playing");
+  });
+  smartPreview.addEventListener("pause", () => {
+    showPreviewSpinner(false);
+    previewContainer.classList.remove("is-playing");
+  });
+  smartPreview.addEventListener("ended", () => {
+    showPreviewSpinner(false);
+    previewContainer.classList.remove("is-playing");
+  });
+  smartPreview.addEventListener("error", () => {
+    showPreviewSpinner(false);
+    smartPreview.hidden = true;
+    thumbnail.hidden = !thumbnail.src;
+  });
+}
 
 const renderCreator = (data) => {
   const creator = data.creator || {};
@@ -447,9 +762,12 @@ const renderDownloadCards = (data, downloads) => {
       const preview = document.createElement("a");
       preview.className = "preview-link";
       preview.href = assetUrl(item.preview_url || item.download_url);
-      preview.target = "_blank";
-      preview.rel = "noreferrer";
       preview.textContent = "Preview";
+      preview.setAttribute("role", "button");
+      preview.addEventListener("click", (e) => {
+        e.preventDefault();
+        openPreviewModal(item);
+      });
 
       const link = document.createElement("a");
       link.className = "download-link";
@@ -468,37 +786,81 @@ const renderDownloadCards = (data, downloads) => {
   );
 };
 
+const analyzeMedia = async (explicitUrl = null) => {
+  const url = String(explicitUrl || (input ? input.value : "")).trim();
+  if (!url) {
+    setStatus("Please paste a valid video or media link first.", true);
+    if (input) input.focus();
+    return;
+  }
+
+  if (input) {
+    input.value = url;
+    if (btnClearUrl) btnClearUrl.style.display = "inline-flex";
+  }
+
+  // Update browser address bar without reload
+  try {
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.get("url") !== url) {
+      currentUrl.searchParams.set("url", url);
+      window.history.replaceState({ url }, "", currentUrl.toString());
+    }
+  } catch {}
+
+  setLoading(true, "Analyzing media link...", "Connecting to platform and extracting HD formats");
+  startProcessLoader();
+  if (result) result.hidden = true;
+  if (creatorCard) creatorCard.hidden = true;
+  setStatus("⏳ Fetching video information and download formats... Please wait.");
+
+  if (loader) {
+    loader.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  try {
+    const response = await fetch(apiUrl("/api/video-info"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.error) {
+      throw new Error(data.error || "Could not fetch media details.");
+    }
+
+    finishProcessLoader();
+    renderResults(data);
+    setStatus("✅ Ready! Your high-quality download options are available below.");
+    if (result) {
+      result.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    window.refreshSocialDownloaderAds?.();
+  } catch (error) {
+    console.error("Fetch error:", error);
+    setStatus(`❌ ${error.message || "This public link could not be analyzed. Please check the URL and try again."}`, true);
+  } finally {
+    setLoading(false);
+  }
+};
+
 if (form) {
-  form.addEventListener("submit", async (event) => {
+  form.addEventListener("submit", (event) => {
     event.preventDefault();
-    const url = input.value.trim();
-    if (!url) return;
+    event.stopPropagation();
+    analyzeMedia();
+    return false;
+  });
+}
 
-    setLoading(true, "Analyzing link...", "Fetching public metadata with yt-dlp");
-    startProcessLoader();
-    if (result) result.hidden = true;
-    if (creatorCard) creatorCard.hidden = true;
-    setStatus("");
-
-    try {
-      const response = await fetch(apiUrl("/api/video-info"), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.error) {
-        throw new Error(data.error || "Could not fetch media details.");
-      }
-
-      finishProcessLoader();
-      renderResults(data);
-      setStatus("Links are ready.");
-    } catch (error) {
-      setStatus(error.message || "This public link could not be analyzed. Try another public media URL.", true);
-    } finally {
-      setLoading(false);
+if (input) {
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      analyzeMedia();
+      return false;
     }
   });
 }
@@ -537,15 +899,26 @@ document.addEventListener("click", (event) => {
   event.preventDefault();
   setStatus("⏳ Starting download...");
 
-  let iframe = document.querySelector("#download-iframe");
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.id = "download-iframe";
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
+  // For iOS, Android and mobile browsers, direct navigation or temporary anchor ensures browser native download manager triggers
+  if (isIos() || /android/i.test(navigator.userAgent)) {
+    const a = document.createElement("a");
+    a.href = downloadHref;
+    a.setAttribute("download", target.getAttribute("data-filename") || "download");
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 200);
+  } else {
+    let iframe = document.querySelector("#download-iframe");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "download-iframe";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+    iframe.src = downloadHref;
   }
-
-  iframe.src = downloadHref;
 
   setTimeout(() => {
     setStatus("✅ Download started!");
@@ -675,5 +1048,36 @@ window.addEventListener("appinstalled", () => {
   if (pwaBanner) pwaBanner.hidden = true;
   setStatus("🎉 Social Downloader App installed successfully!");
   setTimeout(() => setStatus(""), 4000);
+});
+
+// Auto-detect ?url= or ?link= in query parameters on page load
+const initUrlFromQuery = () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const queryUrl = params.get("url") || params.get("link");
+    if (queryUrl && queryUrl.trim().startsWith("http")) {
+      const cleanUrl = queryUrl.trim();
+      if (input) {
+        input.value = cleanUrl;
+        if (btnClearUrl) btnClearUrl.style.display = "inline-flex";
+      }
+      setTimeout(() => {
+        analyzeMedia(cleanUrl);
+      }, 100);
+    }
+  } catch (err) {
+    console.error("Failed to parse URL query:", err);
+  }
+};
+
+initUrlFromQuery();
+
+window.addEventListener("popstate", () => {
+  const params = new URLSearchParams(window.location.search);
+  const queryUrl = params.get("url") || params.get("link");
+  if (queryUrl && queryUrl.trim().startsWith("http") && input && input.value !== queryUrl.trim()) {
+    input.value = queryUrl.trim();
+    analyzeMedia(queryUrl.trim());
+  }
 });
 

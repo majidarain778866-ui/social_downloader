@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "GetintoDevice - Social Video & Audio Downloader",
-  "short_name": "GetintoDevice",
+  "name": "Social Downloader - Video & Audio Downloader",
+  "short_name": "Social Downloader",
   "version": "1.0.0",
-  "description": "Download HD & 4K videos, MP3 audio, reels, and stories from TikTok, Instagram, YouTube, Facebook, X (Twitter), Pinterest, and 50+ platforms.",
-  "author": "GetintoDevice Team",
+  "description": "Download HD & 4K videos, MP3 audio, reels, stories, and photos from TikTok, Instagram, YouTube, Facebook, X (Twitter), Pinterest, and 50+ platforms.",
+  "author": "Social Downloader Team",
   "permissions": [
     "activeTab",
     "downloads",
@@ -18,7 +18,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "GetintoDevice Downloader",
+    "default_title": "Social Downloader",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

@@ -41,7 +41,7 @@ const configuredApiBase = String(window.SOCIAL_DOWNLOADER_API_BASE || "").replac
 let loaderTimer = null;
 let activeFilter = "all";
 let currentDownloads = [];
-const brandSuffix = "getintodevice.com";
+const brandSuffix = "Social Downloader";
 
 const apiUrl = (path) => `${configuredApiBase}${path}`;
 

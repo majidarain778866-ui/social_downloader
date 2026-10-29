@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { existsSync, writeFileSync, copyFileSync, chmodSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
+import { getFfmpegEnv } from "./localFfmpegPath.js";
 
 export const prepareServerlessBinary = (srcPath, name) => {
   if (!srcPath || !existsSync(srcPath)) return srcPath;
@@ -36,7 +37,7 @@ const bundledPythonPath = [
 ].find(p => existsSync(p));
 
 if (bundledPythonPath) {
-  process.env.PYTHONPATH = [bundledPythonPath, process.env.PYTHONPATH].filter(Boolean).join(process.platform === "win32" ? ";" : ":");
+  process.env.PYTHONPATH = [process.env.PYTHONPATH, bundledPythonPath].filter(Boolean).join(process.platform === "win32" ? ";" : ":");
 }
 
 export let pythonCmd = "python3";
@@ -152,7 +153,7 @@ export const decryptData = (token) => {
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const MAX_OPTIONS_PER_ENTRY = 24;
-const BRAND_SUFFIX = "getintodevice.com";
+const BRAND_SUFFIX = "Social Downloader";
 const downloadCache = new Map();
 const videoInfoCache = new Map();
 const INFO_CACHE_TTL_MS = 10 * 60 * 1000; // Cache metadata for 10 minutes
@@ -596,7 +597,17 @@ const optionLabel = (format, entryIndex, totalEntries = 1) => {
   }
 
   // Video format (MP4)
-  const height = Number(format.height || 0);
+  let height = Number(format.height || 0);
+  if (!height && format.resolution && /^\d+x(\d+)$/i.test(format.resolution)) {
+    height = Number(format.resolution.match(/^\d+x(\d+)$/i)[1]);
+  }
+  if (!height && (format.format_id === "hd" || format.format_note === "hd" || /hd/i.test(String(format.format_id)))) {
+    height = 720;
+  }
+  if (!height && (format.format_id === "sd" || format.format_note === "sd" || /sd/i.test(String(format.format_id)))) {
+    height = 360;
+  }
+
   let resLabel = "";
   if (height >= 2160) resLabel = "4K Ultra HD MP4 Video (2160p)";
   else if (height >= 1440) resLabel = "2K Quad HD MP4 Video (1440p)";
@@ -640,7 +651,7 @@ const cacheDownload = ({ format, entry = {}, title, entryIndex = 0 }) => {
   const isVideoWebm = type === "video" && String(format.ext || "").toLowerCase() === "webm";
   const isDirectProtocol = !format.protocol || /^(https?)$/i.test(format.protocol);
   // We need server processing (yt-dlp) if we must merge audio/video, remux webm video to mp4, if we extract audio to MP3, or if it is not a direct protocol (e.g. m3u8, dash)
-  const requiresYtDlp = shouldMergeAudio || isVideoWebm || (type === "audio" && sourceUrl) || !isDirectProtocol;
+  const requiresYtDlp = Boolean(shouldMergeAudio || isVideoWebm || (type === "audio" && sourceUrl) || !isDirectProtocol);
   
   const rawExt = String(format.ext || "").toLowerCase();
   const ext = type === "video" ? "mp4" : type === "audio" ? "mp3" : (rawExt === "png" ? "png" : "jpg");
@@ -650,6 +661,9 @@ const cacheDownload = ({ format, entry = {}, title, entryIndex = 0 }) => {
   const payload = {
     url: format.url || sourceUrl || "",
     sourceUrl,
+    requiresMux: Boolean(format.requiresMux),
+    videoUrl: format.videoUrl || "",
+    audioUrl: format.audioUrl || "",
     formatId: format.format_id,
     formatSelector: shouldMergeAudio
       ? mergeAudioSelector.split('/').map(a => `${format.format_id}+${a}`).join('/') + `/${format.format_id}+bestaudio/${format.format_id}`
@@ -882,33 +896,34 @@ const buildPrimaryActions = (downloads, { sourceUrl, title, strategy }) => {
     })[0] || null;
   };
 
-  const mergedHigh = sourceUrl ? cacheMergedDownload({ sourceUrl, title, quality: "high", strategy }) : null;
-  const mergedNormal = sourceUrl ? cacheMergedDownload({ sourceUrl, title, quality: "normal", strategy }) : null;
-
   const directHigh =
     pickPlayableVideo(completeVideos, { mp4Only: true, maxHeight: isNetlifyRuntime ? 1080 : Number.POSITIVE_INFINITY }) ||
     pickPlayableVideo(completeVideos, { mp4Only: true }) ||
-    pickPlayableVideo(completeVideos);
-
-  const highQuality =
-    directHigh ||
-    mergedHigh ||
+    pickPlayableVideo(completeVideos) ||
     pickPlayableVideo(videos, { mp4Only: true }) ||
-    pickPlayableVideo(videos) ||
-    downloads.find((item) => item.type !== "audio") ||
-    downloads[0] ||
-    null;
+    pickPlayableVideo(videos);
 
   const directNormal =
-    pickPlayableVideo(completeVideos.filter((item) => item !== highQuality), { mp4Only: true, maxHeight: 720 }) ||
-    completeVideos.find((item) => item !== highQuality && maxResolutionSide(item) <= 720) ||
-    completeVideos.find((item) => item !== highQuality && /360|480|540|normal|medium/i.test([item.label, item.resolution].join(" ")));
+    pickPlayableVideo(completeVideos.filter((item) => item !== directHigh), { mp4Only: true, maxHeight: 720 }) ||
+    completeVideos.find((item) => item !== directHigh && maxResolutionSide(item) <= 720) ||
+    completeVideos.find((item) => item !== directHigh && /360|480|540|normal|medium/i.test([item.label, item.resolution].join(" "))) ||
+    pickPlayableVideo(videos.filter((item) => item !== directHigh), { mp4Only: true, maxHeight: 720 }) ||
+    pickPlayableVideo(videos.filter((item) => item !== directHigh), { maxHeight: 720 });
+
+  const directHighRes = directHigh ? maxResolutionSide(directHigh) : 0;
+  const needMergedHigh = (!directHigh || directHighRes < 720) && Boolean(sourceUrl);
+  const mergedHigh = sourceUrl ? cacheMergedDownload({ sourceUrl, title, quality: "high", strategy }) : null;
+  const mergedNormal = sourceUrl ? cacheMergedDownload({ sourceUrl, title, quality: "normal", strategy }) : null;
+
+  const highQuality =
+    (needMergedHigh && mergedHigh)
+      ? mergedHigh
+      : (directHigh || mergedHigh || downloads.find((item) => item.type !== "audio") || downloads[0] || null);
 
   const normalQuality =
     directNormal ||
     mergedNormal ||
-    pickPlayableVideo(videos.filter((item) => item !== highQuality), { mp4Only: true, maxHeight: 720 }) ||
-    pickPlayableVideo(videos.filter((item) => item !== highQuality), { maxHeight: 720 }) ||
+    directHigh ||
     highQuality;
 
   const audios = downloads.filter((item) => item.type === "audio");
@@ -1008,7 +1023,7 @@ export const getOrCreateCookiesPath = () => {
   return null;
 };
 
-const buildYtDlpArgs = (url, cookiesPath, { useImpersonate = true, useCookies = true, playerClient = "android,web" } = {}) => {
+const buildYtDlpArgs = (url, cookiesPath, { useImpersonate = true, useCookies = false, playerClient = null } = {}) => {
   const isYouTube = /youtube\.com|youtu\.be/i.test(url);
   const args = [
     ...ytDlpArgs,
@@ -1018,6 +1033,8 @@ const buildYtDlpArgs = (url, cookiesPath, { useImpersonate = true, useCookies = 
     "--no-playlist",
     "--no-check-certificate",
     "--geo-bypass",
+    "--no-cache-dir",
+    "--js-runtimes", "node",
     "--user-agent",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
   ];
@@ -1042,6 +1059,7 @@ const runYtDlp = async (url) => {
   const cookiesPath = getOrCreateCookiesPath();
   const commonEnv = {
     ...process.env,
+    ...getFfmpegEnv(),
     PYTHONPATH: [process.env.YTDLP_PYTHON_PATH, process.env.PYTHONPATH].filter(Boolean).join(process.platform === "win32" ? ";" : ":")
   };
 
@@ -1056,15 +1074,24 @@ const runYtDlp = async (url) => {
 
   const strategies = [];
   if (isYouTube) {
+    // Strategy 1: Clean request with node JS challenge solver (returns all resolutions: 4K, 1440p, 1080p, 720p, 360p & audio)
+    strategies.push({ useCookies: false, useImpersonate: false, playerClient: null });
+    // Strategy 2: If cookies exist, try with cookies (for age-restricted/member videos)
     if (cookiesPath) {
-      strategies.push({ useCookies: true, useImpersonate: false, playerClient: "android,web" });
+      strategies.push({ useCookies: true, useImpersonate: false, playerClient: null });
     }
-    strategies.push({ useCookies: false, useImpersonate: false, playerClient: "android,web" });
+    // Strategy 3: visionos fallback
+    strategies.push({ useCookies: false, useImpersonate: false, playerClient: "visionos" });
   } else {
+    // For social media (TikTok, Twitter, Instagram, Facebook):
+    // Strategy 1: Without cookies (prevents failing on expired cookies)
+    strategies.push({ useCookies: false, useImpersonate: true });
+    // Strategy 2: With cookies if available
     if (cookiesPath) {
       strategies.push({ useCookies: true, useImpersonate: true });
     }
-    strategies.push({ useCookies: false, useImpersonate: true });
+    // Strategy 3: Standard without impersonate
+    strategies.push({ useCookies: false, useImpersonate: false });
   }
 
   let lastError;
@@ -1320,6 +1347,7 @@ const fetchYouTubeFallback = async (url) => {
 };
 
 const fetchTikTokFallback = async (url) => {
+  const cleanUrl = (url || "").trim().split("?")[0];
   // Strategy 1: Ultra-fast TikWM POST with hd=1 (resolves in ~0.4s with full HD & no watermark)
   try {
     const res = await fetch("https://www.tikwm.com/api/", {
@@ -1328,7 +1356,7 @@ const fetchTikTokFallback = async (url) => {
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
       },
-      body: `url=${encodeURIComponent(url)}&hd=1`
+      body: `url=${encodeURIComponent(cleanUrl || url)}&hd=1`
     });
 
     if (res.ok) {
@@ -1470,7 +1498,7 @@ const fetchTikTokFallback = async (url) => {
 
   // Strategy 2: GET fallback with www subdomain
   try {
-    const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`, {
+    const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(cleanUrl || url)}&hd=1`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
       }
@@ -1595,6 +1623,9 @@ const extractSnapSaveMedia = (decoded) => {
   const html = htmlRaw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 
   const items = [];
+  const globalThumbMatch = html.match(/<article class="media"[^>]*>[\s\S]*?<img[^>]+src="([^"]+)"/i) ||
+                           html.match(/<img[^>]+src="([^"]*rapidcdn\.app\/thumb[^"]*)"/i);
+  const globalThumb = globalThumbMatch ? globalThumbMatch[1] : "";
 
   // Pattern 1: Card items (.download-items)
   const cardRegex = /<div class="download-items">([\s\S]*?)<\/div>\s*<\/div>/g;
@@ -1608,7 +1639,7 @@ const extractSnapSaveMedia = (decoded) => {
     if (linkMatch && linkMatch[1].startsWith("http")) {
       items.push({
         url: linkMatch[1],
-        thumb: thumbMatch ? thumbMatch[1] : "",
+        thumb: thumbMatch ? thumbMatch[1] : globalThumb,
         type: isVideo ? "video" : "image",
         resolution: isVideo ? "1080p (Full HD)" : "High-Res Image"
       });
@@ -1621,16 +1652,39 @@ const extractSnapSaveMedia = (decoded) => {
     let rowMatch;
     while ((rowMatch = rowRegex.exec(html)) !== null) {
       const row = rowMatch[1];
-      const resMatch = row.match(/<td[^>]*>(.*?)<\/td>/i);
+      const resMatch = row.match(/<td[^>]*class="[^"]*video-quality[^"]*"[^>]*>(.*?)<\/td>/i) ||
+                       row.match(/<td[^>]*>(.*?)<\/td>/i);
+      const qualityText = resMatch ? resMatch[1].replace(/<[^>]+>/g, "").trim() : "";
+      if (!qualityText || /quality|processing/i.test(qualityText)) continue;
+
       const linkMatch = row.match(/<a[^>]+href="([^"]+)"/i);
+      const renderMatch = row.match(/get_progressApi\(\\?['"](?:\/)?render\.php\?token=([^'"\\]+)/i);
+
       if (linkMatch && linkMatch[1].startsWith("http")) {
-        const qualityText = resMatch ? resMatch[1].replace(/<[^>]+>/g, "").trim() : "Best Quality";
         items.push({
           url: linkMatch[1],
-          thumb: "",
+          thumb: globalThumb,
           type: "video",
-          resolution: qualityText
+          resolution: qualityText.includes("720") ? "720p (HD)" : qualityText
         });
+      } else if (renderMatch && renderMatch[1]) {
+        try {
+          const token = renderMatch[1];
+          const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf8"));
+          if (payload.video_url) {
+            items.push({
+              url: payload.video_url,
+              videoUrl: payload.video_url,
+              audioUrl: payload.audio_url || "",
+              thumb: globalThumb,
+              type: "video",
+              resolution: qualityText || "1080p (Full HD)",
+              requiresMux: Boolean(payload.audio_url)
+            });
+          }
+        } catch (e) {
+          console.warn("[videoService] Render token decode error:", e.message);
+        }
       }
     }
   }
@@ -1641,9 +1695,9 @@ const extractSnapSaveMedia = (decoded) => {
     if (anyLinkMatch) {
       items.push({
         url: anyLinkMatch[1],
-        thumb: "",
+        thumb: globalThumb,
         type: "video",
-        resolution: "1080p (Full HD)"
+        resolution: "720p (HD)"
       });
     }
   }
@@ -1913,58 +1967,266 @@ const fetchTwitterFallback = async (url) => {
   };
 };
 
-const fetchFacebookFallback = async (url) => {
-  // Strategy 1: SnapSave (Ultra-fast Facebook HD 720p & SD 360p MP4)
+const fetchFacebookMetadata = async (url) => {
   try {
-    const snapItems = await querySnapSave(url);
-    if (snapItems.length > 0) {
-      const title = "Facebook Video";
-      const downloads = [];
-      let firstThumb = "";
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+    if (!res || !res.ok) return null;
+    const html = await res.text().catch(() => "");
+    if (!html) return null;
 
-      snapItems.forEach((item, idx) => {
-        if (!firstThumb && item.thumb) firstThumb = item.thumb;
-        const vId = cacheDownload({ format: { url: item.url, ext: "mp4" }, title: `${title}-${idx + 1}` });
+    const ogImageMatch =
+      html.match(/property="og:image"\s+content="([^"]+)"/i) ||
+      html.match(/content="([^"]+)"\s+property="og:image"/i) ||
+      html.match(/(https:\/\/[^"]+fbcdn\.net[^"]+\.(?:jpg|png)[^"\s]*)/i);
+
+    const ogTitleMatch =
+      html.match(/property="og:title"\s+content="([^"]+)"/i) ||
+      html.match(/content="([^"]+)"\s+property="og:title"/i) ||
+      html.match(/<title>([^<]+)<\/title>/i);
+
+    let rawTitle = ogTitleMatch ? ogTitleMatch[1].replace(/&amp;/g, "&").replace(/&#x201c;|&#x201d;/g, '"').replace(/&#xb7;/g, "·").trim() : "";
+    const rawImage = ogImageMatch ? ogImageMatch[1].replace(/&amp;/g, "&") : "";
+
+    let views = null;
+    let reactions = null;
+    let creatorName = null;
+    let cleanTitle = rawTitle;
+
+    if (rawTitle.includes("|")) {
+      const parts = rawTitle.split("|").map(p => p.trim());
+      if (parts[0] && /views|reactions|likes/i.test(parts[0])) {
+        const statsStr = parts[0];
+        const vMatch = statsStr.match(/([\d.]+[KMB]?)\s*views/i);
+        const rMatch = statsStr.match(/([\d.]+[KMB]?)\s*(?:reactions|likes)/i);
+        if (vMatch) views = vMatch[1];
+        if (rMatch) reactions = rMatch[1];
+        cleanTitle = parts.slice(1, parts.length > 2 ? -1 : undefined).join(" | ").trim();
+        if (parts.length > 2) creatorName = parts[parts.length - 1];
+      }
+    }
+
+    return {
+      title: cleanTitle || rawTitle || "Facebook Video",
+      thumbnail: rawImage || "",
+      views,
+      reactions,
+      creatorName
+    };
+  } catch {
+    return null;
+  }
+};
+
+const fetchFacebookFallback = async (url) => {
+  let targetUrl = url;
+  if (url.includes("/share/")) {
+    try {
+      const headRes = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+        },
+        redirect: "follow"
+      });
+      if (headRes && headRes.url && !headRes.url.includes("/share/")) {
+        targetUrl = headRes.url.split("?")[0];
+      }
+    } catch {}
+  }
+
+  // Fetch OpenGraph metadata & direct Facebook HTML in parallel
+  const fbMetaPromise = fetchFacebookMetadata(targetUrl).then(m => m || fetchFacebookMetadata(url));
+  const fbDirectPromise = (async () => {
+    try {
+      const fbRes = await fetch(targetUrl, {
+        headers: {
+          "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+          "Accept-Language": "en-US,en;q=0.9"
+        }
+      });
+      if (!fbRes || !fbRes.ok) return null;
+      const rawHtml = await fbRes.text().catch(() => "");
+      const html = rawHtml.replace(/\\u0025/g, "%").replace(/\\u0026/g, "&").replace(/\\\//g, "/").replace(/\\/g, "");
+      const hdMatch = html.match(/"(?:browser_native_hd_url|playable_url_quality_hd|hd_src|hd_src_no_ratelimit)":\s*"([^"]+)"/i);
+      const sdMatch = html.match(/"(?:browser_native_sd_url|playable_url|sd_src|sd_src_no_ratelimit)":\s*"([^"]+)"/i);
+      const thumbMatch = html.match(/"preferred_thumbnail":\s*\{[^}]*"uri":\s*"([^"]+)"/i) ||
+                         html.match(/property="og:image"\s+content="([^"]+)"/i);
+      return {
+        hdUrl: hdMatch ? hdMatch[1] : null,
+        sdUrl: sdMatch ? sdMatch[1] : null,
+        thumbUrl: thumbMatch ? thumbMatch[1].replace(/&amp;/g, "&") : null
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  // Strategy 1: SnapSave (Ultra-fast Facebook HD 1080p, 720p & 360p MP4)
+  try {
+    let snapItems = await querySnapSave(targetUrl);
+    if ((!snapItems || snapItems.length === 0) && targetUrl !== url) {
+      snapItems = await querySnapSave(url);
+    }
+    const fbDirect = await fbDirectPromise;
+    const fbMeta = (await fbMetaPromise) || {};
+    const title = fbMeta.title || "Facebook Video";
+
+    if (snapItems.length > 0 || (fbDirect && (fbDirect.hdUrl || fbDirect.sdUrl))) {
+      const thumbnail = fbMeta.thumbnail || snapItems[0]?.thumb || fbDirect?.thumbUrl || "";
+      const downloads = [];
+
+      // Add SnapSave items (supports 1080p with requiresMux and 720p direct)
+      snapItems.forEach((item) => {
+        const is1080 = item.resolution?.includes("1080");
+        const is720 = item.resolution?.includes("720");
+        const label = is1080
+          ? "Facebook 1080p Full HD MP4 Video"
+          : is720
+          ? "Facebook 720p HD MP4 Video"
+          : `Facebook MP4 Video (${item.resolution})`;
+        const badge = is1080 ? "1080p Full HD" : is720 ? "720p HD" : "Fast MP4";
+
+        const vId = cacheDownload({
+          format: {
+            url: item.url,
+            ext: "mp4",
+            requiresMux: Boolean(item.requiresMux),
+            videoUrl: item.videoUrl || "",
+            audioUrl: item.audioUrl || ""
+          },
+          title: `${title}-${item.resolution || "video"}`
+        });
+
         downloads.push({
           id: vId,
-          label: snapItems.length > 1 ? `Facebook MP4 Video (${item.resolution})` : "Facebook HD MP4 Video",
-          resolution: item.resolution || "Best HD MP4",
+          label,
+          resolution: item.resolution || "HD Video",
           type: "video",
           has_audio: true,
           has_video: true,
-          badge: idx === 0 ? "Best HD MP4" : "Fast MP4",
+          badge,
           extension: "mp4",
           download_url: `/api/download?id=${encodeURIComponent(vId)}`,
           preview_url: `/api/download?id=${encodeURIComponent(vId)}&preview=1`
         });
       });
 
-      if (firstThumb) {
-        const tOpt = normalizeThumbnail(firstThumb, title);
-        if (tOpt) downloads.push(tOpt);
+      // If we don't have a 720p yet but Facebook direct has hdUrl, add it
+      if (!downloads.some(d => d.resolution.includes("720") || d.label.includes("720")) && fbDirect?.hdUrl) {
+        const hdId = cacheDownload({ format: { url: fbDirect.hdUrl, ext: "mp4" }, title: `${title}-720p` });
+        downloads.push({
+          id: hdId,
+          label: "Facebook 720p HD MP4 Video",
+          resolution: "720p (HD)",
+          type: "video",
+          has_audio: true,
+          has_video: true,
+          badge: "720p HD",
+          extension: "mp4",
+          download_url: `/api/download?id=${encodeURIComponent(hdId)}`,
+          preview_url: `/api/download?id=${encodeURIComponent(hdId)}&preview=1`
+        });
       }
 
-      if (downloads.length > 0) {
-        return {
-          title,
-          thumbnail: firstThumb,
-          platform: "Facebook",
-          platform_key: "facebook",
-          platform_label: "Facebook",
-          platform_icon: "FB",
-          uploader: "Facebook Creator",
-          duration: "HD Media",
-          source_url: url,
-          primary_actions: {
-            high_quality: downloads[0] || null,
-            normal_quality: downloads[1] || downloads[0] || null,
-            audio_mp3: null,
-            thumbnail_hd: downloads.find(d => d.type === "image") || null
-          },
-          downloads,
-          videos: downloads
-        };
+      // Add real SD (480p / 360p) from Facebook direct sdUrl if available and not yet present
+      if (!downloads.some(d => d.resolution.includes("360") || d.resolution.includes("480")) && fbDirect?.sdUrl) {
+        const sdId = cacheDownload({ format: { url: fbDirect.sdUrl, ext: "mp4" }, title: `${title}-sd` });
+        downloads.push({
+          id: sdId,
+          label: "Facebook Standard MP4 Video",
+          resolution: "480p / 360p (SD)",
+          type: "video",
+          has_audio: true,
+          has_video: true,
+          badge: "Standard SD",
+          extension: "mp4",
+          download_url: `/api/download?id=${encodeURIComponent(sdId)}`,
+          preview_url: `/api/download?id=${encodeURIComponent(sdId)}&preview=1`
+        });
       }
+
+      // Add High Quality MP3 Audio option
+      const primaryVideoUrl = snapItems[0]?.audioUrl || snapItems[0]?.url || fbDirect?.hdUrl || fbDirect?.sdUrl;
+      let audioOption = null;
+      if (primaryVideoUrl) {
+        const audioId = cacheDownload({
+          format: { url: primaryVideoUrl, ext: "mp3", vcodec: "none", acodec: "mp3" },
+          title: `${title} Audio`
+        });
+        audioOption = {
+          id: audioId,
+          label: "Facebook High Quality Audio (MP3)",
+          resolution: "320kbps MP3",
+          type: "audio",
+          has_audio: true,
+          has_video: false,
+          badge: "320kbps MP3",
+          extension: "mp3",
+          download_url: `/api/download?id=${encodeURIComponent(audioId)}`,
+          preview_url: `/api/download?id=${encodeURIComponent(audioId)}&preview=1`
+        };
+        downloads.push(audioOption);
+      }
+
+      // Add HD Thumbnail Cover option
+      let thumbOption = null;
+      if (thumbnail) {
+        thumbOption = normalizeThumbnail(thumbnail, title);
+        if (thumbOption) {
+          thumbOption.label = "Facebook HD Cover (JPG)";
+          thumbOption.resolution = "HD Cover (1080p)";
+          thumbOption.badge = "HD JPG Cover";
+          downloads.push(thumbOption);
+        }
+      }
+      // Sort video downloads highest resolution first, then audio, then image
+      downloads.sort((a, b) => {
+        if (a.type !== b.type) {
+          if (a.type === "video") return -1;
+          if (b.type === "video") return 1;
+          if (a.type === "audio") return -1;
+          if (b.type === "audio") return 1;
+        }
+        const scoreA = a.resolution?.includes("1080") ? 1080 : a.resolution?.includes("720") ? 720 : a.resolution?.includes("480") ? 480 : a.resolution?.includes("360") ? 360 : 0;
+        const scoreB = b.resolution?.includes("1080") ? 1080 : b.resolution?.includes("720") ? 720 : b.resolution?.includes("480") ? 480 : b.resolution?.includes("360") ? 360 : 0;
+        return scoreB - scoreA;
+      });
+
+      const videoDownloads = downloads.filter(d => d.type === "video");
+
+      return {
+        title,
+        thumbnail,
+        platform: "Facebook",
+        platform_key: "facebook",
+        platform_label: "Facebook",
+        platform_icon: "FB",
+        uploader: fbMeta.creatorName || "Facebook Creator",
+        duration: "HD Media",
+        source_url: url,
+        creator: {
+          name: fbMeta.creatorName || "Facebook Creator",
+          handle: "Facebook",
+          avatar: thumbnail
+        },
+        media: {
+          view_count: fbMeta.views || "",
+          like_count: fbMeta.reactions || "",
+          duration: "HD Media"
+        },
+        primary_actions: {
+          high_quality: videoDownloads[0] || null,
+          normal_quality: videoDownloads[1] || videoDownloads[0] || null,
+          audio_mp3: audioOption || null,
+          thumbnail_hd: thumbOption || null
+        },
+        downloads,
+        videos: downloads
+      };
     }
   } catch (err) {
     console.warn("[videoService] SnapSave Facebook error:", err.message);
@@ -1985,9 +2247,9 @@ const fetchFacebookFallback = async (url) => {
       .replace(/\\u0026/g, "&")
       .replace(/\\/g, "");
 
-    const mp4Match =
-      html.match(/"(?:browser_native_hd_url|playable_url_quality_hd|browser_native_sd_url|playable_url|sd_src|hd_src|sd_src_no_ratelimit|hd_src_no_ratelimit)":\s*"([^"]+)"/i) ||
-      html.match(/(https:\/\/[^"]+fbcdn\.net[^"]+\.mp4[^"\s]*)/i);
+    const hdMatch = html.match(/"(?:browser_native_hd_url|playable_url_quality_hd|hd_src|hd_src_no_ratelimit)":\s*"([^"]+)"/i);
+    const sdMatch = html.match(/"(?:browser_native_sd_url|playable_url|sd_src|sd_src_no_ratelimit)":\s*"([^"]+)"/i);
+    const mp4Match = hdMatch || sdMatch || html.match(/(https:\/\/[^"]+fbcdn\.net[^"]+\.mp4[^"\s]*)/i);
 
     const thumbMatch =
       html.match(/"preferred_thumbnail":\s*\{[^}]*"uri":\s*"([^"]+)"/i) ||
@@ -1996,33 +2258,110 @@ const fetchFacebookFallback = async (url) => {
 
     const titleMatch = rawHtml.match(/<title>([^<]{3,200})<\/title>/i);
 
+    const hdUrl = hdMatch ? hdMatch[1] : null;
+    const sdUrl = sdMatch ? sdMatch[1] : null;
     const videoUrl = mp4Match ? mp4Match[1] : null;
-    const thumbUrl = thumbMatch ? thumbMatch[1] : null;
+    const thumbUrl = thumbMatch ? thumbMatch[1].replace(/&amp;/g, "&") : null;
     const title = titleMatch ? titleMatch[1].replace(/ \| Facebook$/i, "").replace(/&amp;/g, "&").trim() : "Facebook Video";
 
     if (videoUrl) {
       const downloads = [];
-      const vId = cacheDownload({ format: { url: videoUrl, ext: "mp4" }, title });
-      downloads.push({
-        id: vId, label: "Facebook HD MP4 Video", resolution: "Best HD MP4",
-        type: "video", has_audio: true, has_video: true, badge: "Best MP4 Video", extension: "mp4",
-        download_url: `/api/download?id=${encodeURIComponent(vId)}`,
-        preview_url: `/api/download?id=${encodeURIComponent(vId)}&preview=1`
-      });
 
-      if (thumbUrl) {
-        const tOpt = normalizeThumbnail(thumbUrl, title);
-        if (tOpt) downloads.push(tOpt);
+      if (hdUrl) {
+        const vId = cacheDownload({ format: { url: hdUrl, ext: "mp4" }, title: `${title}-HD` });
+        downloads.push({
+          id: vId,
+          label: "Facebook 720p HD MP4 Video",
+          resolution: "720p (HD)",
+          type: "video",
+          has_audio: true,
+          has_video: true,
+          badge: "720p HD",
+          extension: "mp4",
+          download_url: `/api/download?id=${encodeURIComponent(vId)}`,
+          preview_url: `/api/download?id=${encodeURIComponent(vId)}&preview=1`
+        });
       }
+
+      if (sdUrl && sdUrl !== hdUrl) {
+        const sdId = cacheDownload({ format: { url: sdUrl, ext: "mp4" }, title: `${title}-SD` });
+        downloads.push({
+          id: sdId,
+          label: "Facebook Standard MP4 Video",
+          resolution: "480p / 360p (SD)",
+          type: "video",
+          has_audio: true,
+          has_video: true,
+          badge: "Standard SD",
+          extension: "mp4",
+          download_url: `/api/download?id=${encodeURIComponent(sdId)}`,
+          preview_url: `/api/download?id=${encodeURIComponent(sdId)}&preview=1`
+        });
+      } else if (!hdUrl) {
+        const vId = cacheDownload({ format: { url: videoUrl, ext: "mp4" }, title });
+        downloads.push({
+          id: vId,
+          label: "Facebook MP4 Video",
+          resolution: "Best MP4",
+          type: "video",
+          has_audio: true,
+          has_video: true,
+          badge: "Fast MP4",
+          extension: "mp4",
+          download_url: `/api/download?id=${encodeURIComponent(vId)}`,
+          preview_url: `/api/download?id=${encodeURIComponent(vId)}&preview=1`
+        });
+      }
+
+      const audioId = cacheDownload({
+        format: { url: videoUrl, ext: "mp3", vcodec: "none", acodec: "mp3" },
+        title: `${title} Audio`
+      });
+      const audioOption = {
+        id: audioId,
+        label: "Facebook High Quality Audio (MP3)",
+        resolution: "320kbps MP3",
+        type: "audio",
+        has_audio: true,
+        has_video: false,
+        badge: "320kbps MP3",
+        extension: "mp3",
+        download_url: `/api/download?id=${encodeURIComponent(audioId)}`,
+        preview_url: `/api/download?id=${encodeURIComponent(audioId)}&preview=1`
+      };
+      downloads.push(audioOption);
+
+      let thumbOption = null;
+      if (thumbUrl) {
+        thumbOption = normalizeThumbnail(thumbUrl, title);
+        if (thumbOption) {
+          thumbOption.label = "Facebook HD Cover (JPG)";
+          thumbOption.resolution = "HD Cover (1080p)";
+          thumbOption.badge = "HD JPG Cover";
+          downloads.push(thumbOption);
+        }
+      }
+
+      const videoDownloads = downloads.filter(d => d.type === "video");
+
       return {
-        title, thumbnail: thumbUrl || "", platform: "Facebook", platform_key: "facebook",
-        platform_label: "Facebook", platform_icon: "FB", uploader: "Facebook Creator",
-        duration: "HD Media", source_url: url,
+        title,
+        thumbnail: thumbUrl || "",
+        platform: "Facebook",
+        platform_key: "facebook",
+        platform_label: "Facebook",
+        platform_icon: "FB",
+        uploader: "Facebook Creator",
+        duration: "HD Media",
+        source_url: url,
         primary_actions: {
-          high_quality: downloads[0] || null, normal_quality: downloads[0] || null, audio_mp3: null,
-          thumbnail_hd: downloads.find(d => d.type === "image") || null
+          high_quality: videoDownloads[0] || null,
+          normal_quality: videoDownloads[1] || videoDownloads[0] || null,
+          audio_mp3: audioOption,
+          thumbnail_hd: thumbOption || null
         },
-        downloads, videos: downloads
+        downloads,
+        videos: downloads
       };
     }
   }
@@ -2092,16 +2431,20 @@ export const fetchVideoDetails = async (url) => {
         expiresAt: Date.now() + INFO_CACHE_TTL_MS
       });
     } catch (err) {
-      if (isFastSocialPlatform) throw err;
       console.warn("[videoService] runYtDlp failed, trying platform fallbacks:", err.message);
-      const fallbackResult = await routePlatformFallback(normalized, err);
-      if (fallbackResult && fallbackResult.downloads) {
-        videoInfoCache.set(normalized, {
-          data: fallbackResult,
-          expiresAt: Date.now() + INFO_CACHE_TTL_MS
-        });
+      try {
+        const fallbackResult = await routePlatformFallback(normalized, err);
+        if (fallbackResult && fallbackResult.downloads && fallbackResult.downloads.length > 0) {
+          videoInfoCache.set(normalized, {
+            data: fallbackResult,
+            expiresAt: Date.now() + INFO_CACHE_TTL_MS
+          });
+          return fallbackResult;
+        }
+      } catch (fbErr) {
+        console.warn("[videoService] Fallback also failed:", fbErr.message);
       }
-      return fallbackResult;
+      throw err;
     }
   }
 

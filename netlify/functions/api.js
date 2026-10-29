@@ -159,14 +159,15 @@ const streamYtDlpDownload = async (cached, inline = false) => {
   const useImpersonate = cached.useImpersonate !== false;
   const args = [
     ...ytDlpArgs,
-    "--no-warnings"
+    "--no-warnings",
+    "--no-check-certificate",
+    "--no-cache-dir",
+    "--js-runtimes", "node"
   ];
 
   if (ffmpegPath && ffmpegPath !== "ffmpeg") {
     args.push("--ffmpeg-location", ffmpegPath);
   }
-
-  args.push("--no-check-certificate");
 
   if (useImpersonate) {
     args.push("--impersonate", "chrome");
@@ -176,8 +177,9 @@ const streamYtDlpDownload = async (cached, inline = false) => {
     args.push("--cookies", cookiesPath);
   }
 
-  const client = cached.playerClient || "mweb,android,web";
-  args.push("--extractor-args", `youtube:player_client=${client}`);
+  if (cached.playerClient) {
+    args.push("--extractor-args", `youtube:player_client=${cached.playerClient}`);
+  }
 
   if (isAudioMp3) {
     args.push(
@@ -196,9 +198,9 @@ const streamYtDlpDownload = async (cached, inline = false) => {
       "--remux-video",
       "mp4",
       "-f",
-      cached.formatSelector || cached.formatId || "bestvideo+bestaudio/best",
+      cached.formatSelector || cached.formatId || "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/best",
       "--postprocessor-args",
-      "Merger:-strict -2"
+      "Merger:-c:a aac -strict -2"
     );
   }
 
@@ -268,7 +270,21 @@ const handleDownload = async (req) => {
 
   if (!id) return json({ error: "A valid cached download ID is required." }, 400);
   if (!cached) return json({ error: "This download link expired. Fetch the video again." }, 404);
-  if (cached.requiresYtDlp) return streamYtDlpDownload(cached, inline);
+  if (cached.requiresYtDlp) {
+    if (cached.url && isHttpUrl(cached.url) && cached.url !== cached.sourceUrl) {
+      // Has direct media URL candidate, continue to proxy/redirect
+    } else {
+      try {
+        return await streamYtDlpDownload(cached, inline);
+      } catch (dlErr) {
+        console.error("streamYtDlpDownload failed:", dlErr.message);
+        if (cached.url && isHttpUrl(cached.url) && cached.url !== cached.sourceUrl) {
+          return Response.redirect(cached.url, 302);
+        }
+        return json({ error: dlErr?.message || "Download processing failed." }, 500);
+      }
+    }
+  }
   if (!cached.url || !isHttpUrl(cached.url)) return json({ error: "A valid download URL is required." }, 400);
 
   const upstream = await fetch(cached.url, {
@@ -282,6 +298,9 @@ const handleDownload = async (req) => {
   }
 
   const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+  if (contentType.toLowerCase().includes("text/html") || contentType.toLowerCase().includes("application/json")) {
+    return json({ error: "Direct media stream could not be loaded. Please re-fetch and try another resolution." }, 502);
+  }
   const rawExt = (extensionFromContentType(contentType, cached.url) || `.${cached.ext || "mp4"}`).replace(/^\./, "");
   let baseName = String(cached.filename || "download").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim().replace(/\.+$/, "");
   const knownExtRegex = /\.(mp4|mp3|m4a|webm|jpg|jpeg|png|webp)$/i;

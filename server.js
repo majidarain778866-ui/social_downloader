@@ -376,6 +376,12 @@ const renderIndex = async (req, page) => {
     }
   }
 
+  const requestUrl = new URL(req.url, `http://${req.headers.host}`);
+  const queryUrl = requestUrl.searchParams.get("url") || requestUrl.searchParams.get("link") || "";
+  if (queryUrl && isHttpUrl(queryUrl)) {
+    html = html.replace('id="url-input" name="url"', `id="url-input" name="url" value="${escapeHtml(queryUrl)}"`);
+  }
+
   return html;
 };
 
@@ -405,6 +411,29 @@ Disallow: /api/
 Sitemap: ${absoluteUrl(req, "/sitemap.xml")}
 `;
 
+const contentTypeFromExtension = (extension = "") => {
+  const ext = extension.toLowerCase().replace(/^\./, "");
+  if (["jpg", "jpeg"].includes(ext)) return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (["mp3", "m4a", "aac"].includes(ext)) return "audio/mpeg";
+  if (ext === "webm") return "video/webm";
+  if (ext === "mp4") return "video/mp4";
+  return "application/octet-stream";
+};
+
+const extensionFromContentType = (contentType, target) => {
+  try {
+    const pathExtension = extname(new URL(target).pathname);
+    if (pathExtension && pathExtension.length <= 8) return pathExtension;
+  } catch {}
+  if (contentType.includes("audio")) return ".mp3";
+  if (contentType.includes("image/jpeg")) return ".jpg";
+  if (contentType.includes("image/png")) return ".png";
+  if (contentType.includes("video")) return ".mp4";
+  return ".bin";
+};
+
 const handleDownloadProxy = async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   const id = requestUrl.searchParams.get("id");
@@ -426,8 +455,53 @@ const handleDownloadProxy = async (req, res) => {
       await streamYtDlpDownload(cached, res, { inline: isPreview });
       return;
     } catch (err) {
-      console.warn("[server.js] streamYtDlpDownload failed, falling back to direct media proxy:", err.message);
+      console.error("[server.js] streamYtDlpDownload failed:", err.message);
+      if (res.headersSent) {
+        if (!res.destroyed) res.destroy();
+        return;
+      }
+      sendJson(res, 500, { error: `Download failed: ${err.message}` });
+      return;
     }
+  }
+
+  // Handle on-the-fly video + audio muxing for 1080p DASH streams
+  if (cached.requiresMux && cached.videoUrl && cached.audioUrl && ffmpegPath) {
+    const rawBase = String(cached.filename || "video").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim().replace(/\.+$/, "");
+    const finalName = rawBase.toLowerCase().endsWith(".mp4") ? rawBase : `${rawBase}.mp4`;
+    const responseHeaders = {
+      "content-type": "video/mp4",
+      "content-disposition": isPreview ? inlineDisposition(finalName) : contentDisposition(finalName),
+      "accept-ranges": "bytes",
+      "cache-control": "no-store",
+      ...corsHeaders
+    };
+    if (req.method === "HEAD") {
+      res.writeHead(200, responseHeaders);
+      res.end();
+      return;
+    }
+    res.writeHead(200, responseHeaders);
+    const child = spawn(ffmpegPath, [
+      "-hide_banner",
+      "-loglevel", "error",
+      "-i", cached.videoUrl,
+      "-i", cached.audioUrl,
+      "-c:v", "copy",
+      "-c:a", "aac",
+      "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+      "-f", "mp4",
+      "pipe:1"
+    ], { windowsHide: true });
+
+    child.stdout.pipe(res);
+    const killChild = () => { if (!child.killed) child.kill("SIGTERM"); };
+    res.on("close", killChild);
+    child.on("error", (err) => {
+      console.error("[server.js] ffmpeg 1080p mux error:", err.message);
+      if (!res.headersSent) sendJson(res, 500, { error: "Failed to generate 1080p MP4." });
+    });
+    return;
   }
 
   const mediaTargetUrl = cached.url || cached.sourceUrl;
@@ -436,47 +510,132 @@ const handleDownloadProxy = async (req, res) => {
     return;
   }
 
+  // Handle on-the-fly MP3 audio conversion for direct media targets
+  if (cached.type === "audio" && cached.ext === "mp3" && ffmpegPath) {
+    const rawBase = String(cached.filename || "audio").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim().replace(/\.+$/, "");
+    const finalName = rawBase.toLowerCase().endsWith(".mp3") ? rawBase : `${rawBase}.mp3`;
+    const responseHeaders = {
+      "content-type": "audio/mpeg",
+      "content-disposition": isPreview ? inlineDisposition(finalName) : contentDisposition(finalName),
+      "accept-ranges": "bytes",
+      "cache-control": "no-store",
+      ...corsHeaders
+    };
+    if (req.method === "HEAD") {
+      res.writeHead(200, responseHeaders);
+      res.end();
+      return;
+    }
+    res.writeHead(200, responseHeaders);
+    const child = spawn(ffmpegPath, [
+      "-hide_banner",
+      "-loglevel", "error",
+      "-i", mediaTargetUrl,
+      "-vn",
+      "-c:a", "libmp3lame",
+      "-b:a", "320k",
+      "-f", "mp3",
+      "pipe:1"
+    ], { windowsHide: true });
+
+    child.stdout.pipe(res);
+    const killChild = () => { if (!child.killed) child.kill("SIGTERM"); };
+    res.on("close", killChild);
+    child.on("error", (err) => {
+      console.error("[server.js] ffmpeg audio transcode error:", err.message);
+      if (!res.headersSent) sendJson(res, 500, { error: "Failed to generate MP3." });
+    });
+    return;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DOWNLOAD_HEADER_TIMEOUT_MS);
   res.on("close", () => controller.abort());
 
-  const upstream = await fetch(mediaTargetUrl, {
-    headers: cached.headers,
-    redirect: "follow",
-    signal: controller.signal
-  }).finally(() => clearTimeout(timeout));
+  const upstreamHeaders = {
+    ...(cached.headers || {})
+  };
+  if (req.headers.range) {
+    upstreamHeaders.range = req.headers.range;
+  }
 
-  if (!upstream.ok || !upstream.body) {
-    console.warn(`[server.js] Upstream returned ${upstream?.status}, redirecting directly to media target URL...`);
-    res.writeHead(302, {
-      "location": mediaTargetUrl,
-      "cache-control": "no-store",
-      ...corsHeaders
-    });
-    res.end();
+  let upstream = null;
+  try {
+    upstream = await fetch(mediaTargetUrl, {
+      headers: upstreamHeaders,
+      redirect: "follow",
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeout));
+  } catch (err) {
+    console.warn("[server.js] fetch failed for mediaTargetUrl:", err.message);
+  }
+
+  if (!upstream || (!upstream.ok && upstream.status !== 206) || !upstream.body) {
+    if (res.headersSent) return;
+    if (mediaTargetUrl && isHttpUrl(mediaTargetUrl)) {
+      console.warn(`[server.js] Upstream returned ${upstream?.status}, redirecting directly to media target URL...`);
+      res.writeHead(302, {
+        "location": mediaTargetUrl,
+        "cache-control": "no-store",
+        ...corsHeaders
+      });
+      res.end();
+      return;
+    }
+    sendJson(res, 502, { error: "Upstream media source unavailable." });
     return;
   }
 
-  const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+  let contentType = upstream.headers.get("content-type") || "";
+  const ext = (cached.ext || "").toLowerCase();
+
+  // If upstream returns generic binary or octet-stream, enforce proper media content type
+  if (!contentType || contentType === "application/octet-stream" || contentType === "binary/octet-stream") {
+    contentType = contentTypeFromExtension(ext || "mp4");
+  }
+
+  // Prevent HTML web pages or JSON error responses from being streamed as corrupted .mp4 files
+  if (contentType.toLowerCase().includes("text/html") || contentType.toLowerCase().includes("application/json")) {
+    console.warn(`[server.js] Upstream returned non-media content-type: ${contentType}.`);
+    sendJson(res, 502, { error: "Direct media stream could not be loaded. Please re-fetch and try another resolution." });
+    return;
+  }
+
   const rawExt = (extensionFromContentType(contentType, mediaTargetUrl) || `.${cached.ext || "mp4"}`).replace(/^\./, "");
   let baseName = String(cached.filename || "download").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim().replace(/\.+$/, "");
   const knownExtRegex = /\.(mp4|mp3|m4a|webm|jpg|jpeg|png|webp)$/i;
   const finalName = knownExtRegex.test(baseName) ? baseName : `${baseName}.${cached.ext || rawExt || "mp4"}`;
 
-  res.writeHead(200, {
+  const contentLength = upstream.headers.get("content-length");
+  const contentRange = upstream.headers.get("content-range");
+  const isPartial = req.headers.range && (upstream.status === 206 || Boolean(contentRange));
+  const statusCode = isPartial ? 206 : (upstream.status >= 200 && upstream.status < 300 ? upstream.status : 200);
+
+  const responseHeaders = {
     "content-type": contentType,
     "content-disposition": isPreview ? inlineDisposition(finalName) : contentDisposition(finalName),
+    "accept-ranges": "bytes",
     "cache-control": "no-store",
     ...corsHeaders
-  });
+  };
+  if (contentLength) responseHeaders["content-length"] = contentLength;
+  if (contentRange) responseHeaders["content-range"] = contentRange;
+
+  if (req.method === "HEAD") {
+    res.writeHead(statusCode, responseHeaders);
+    res.end();
+    return;
+  }
+
+  res.writeHead(statusCode, responseHeaders);
 
   try {
     await new Promise((resolve, reject) => {
       const stream = Readable.from(upstream.body);
       stream.on("error", reject);
       res.on("error", reject);
-      res.on("finish", resolve);
       stream.pipe(res);
+      res.on("finish", resolve);
     });
   } catch (error) {
     console.error("Direct fetch streaming error:", error);
@@ -485,30 +644,23 @@ const handleDownloadProxy = async (req, res) => {
 };
 
 const streamYtDlpDownload = async (cached, res, options = {}) => {
-  // Send headers immediately to prevent Gateway Timeout on cloud routers (Hugging Face / Render / Netlify)
-  res.writeHead(200, {
-    "content-type": contentTypeFromExtension(cached.ext),
-    "content-disposition": options.inline ? inlineDisposition(cached.filename) : contentDisposition(cached.filename),
-    "cache-control": "no-store",
-    ...corsHeaders
-  });
-
   const tempDir = await mkdtemp(join(tmpdir(), "social-downloader-"));
   const outputTemplate = join(tempDir, "download.%(ext)s");
   const isAudioMp3 = cached.type === "audio" && cached.ext === "mp3";
   const cookiesPath = getOrCreateCookiesPath();
-  const useCookies = cached.useCookies !== false;
+  const useCookies = cached.useCookies === true && Boolean(cookiesPath);
   const useImpersonate = cached.useImpersonate !== false;
   const args = [
     ...ytDlpArgs,
-    "--no-warnings"
+    "--no-warnings",
+    "--no-check-certificate",
+    "--no-cache-dir",
+    "--js-runtimes", "node"
   ];
 
   if (ffmpegPath && ffmpegPath !== "ffmpeg") {
     args.push("--ffmpeg-location", ffmpegPath);
   }
-
-  args.push("--no-check-certificate");
 
   if (useImpersonate) {
     args.push("--impersonate", "chrome");
@@ -518,8 +670,9 @@ const streamYtDlpDownload = async (cached, res, options = {}) => {
     args.push("--cookies", cookiesPath);
   }
 
-  const client = cached.playerClient || "mweb,android,web";
-  args.push("--extractor-args", `youtube:player_client=${client}`);
+  if (cached.playerClient) {
+    args.push("--extractor-args", `youtube:player_client=${cached.playerClient}`);
+  }
 
   if (isAudioMp3) {
     args.push(
@@ -538,13 +691,14 @@ const streamYtDlpDownload = async (cached, res, options = {}) => {
       "--remux-video",
       "mp4",
       "-f",
-      cached.formatSelector || cached.formatId || "bestvideo+bestaudio/best",
+      cached.formatSelector || cached.formatId || "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/best",
       "--postprocessor-args",
-      "Merger:-strict -2"
+      "Merger:-c:a aac -strict -2"
     );
   }
 
   args.push("-o", outputTemplate, cached.sourceUrl);
+  console.log("[streamYtDlpDownload] Running yt-dlp:", pythonCmd, args.map(a => a.includes(" ") ? `"${a}"` : a).join(" "));
   const child = spawn(pythonCmd, args, {
     env: {
       ...getFfmpegEnv(),
@@ -592,40 +746,25 @@ const streamYtDlpDownload = async (cached, res, options = {}) => {
                    completedFiles.filter(Boolean).sort((a, b) => b.fileStat.size - a.fileStat.size)[0];
     if (!output) throw new Error("yt-dlp did not produce a downloadable file.");
 
+    const actualExt = extname(output.path).slice(1) || cached.ext || "mp4";
+    res.writeHead(200, {
+      "content-type": contentTypeFromExtension(actualExt),
+      "content-disposition": options.inline ? inlineDisposition(cached.filename) : contentDisposition(cached.filename),
+      "content-length": output.fileStat.size,
+      "cache-control": "no-store",
+      ...corsHeaders
+    });
+
     await new Promise((resolve, reject) => {
       const stream = createReadStream(output.path);
       stream.on("error", reject);
       stream.on("end", resolve);
       stream.pipe(res);
     });
-  } catch (error) {
-    console.error(error);
-    if (!res.destroyed) res.destroy(error);
   } finally {
     res.off("close", killChild);
     await rm(tempDir, { recursive: true, force: true });
   }
-};
-
-const contentTypeFromExtension = (extension = "") => {
-  const ext = extension.toLowerCase().replace(/^\./, "");
-  if (["jpg", "jpeg"].includes(ext)) return "image/jpeg";
-  if (ext === "png") return "image/png";
-  if (ext === "webp") return "image/webp";
-  if (["mp3", "m4a", "aac"].includes(ext)) return "audio/mpeg";
-  if (ext === "webm") return "video/webm";
-  if (ext === "mp4") return "video/mp4";
-  return "application/octet-stream";
-};
-
-const extensionFromContentType = (contentType, target) => {
-  const pathExtension = extname(new URL(target).pathname);
-  if (pathExtension && pathExtension.length <= 8) return pathExtension;
-  if (contentType.includes("audio")) return ".mp3";
-  if (contentType.includes("image/jpeg")) return ".jpg";
-  if (contentType.includes("image/png")) return ".png";
-  if (contentType.includes("video")) return ".mp4";
-  return ".bin";
 };
 
 const serveStatic = async (req, res) => {
@@ -690,7 +829,7 @@ const serveStatic = async (req, res) => {
 
   if (routePage) {
     const html = await renderIndex(req, routePage);
-    res.writeHead(200, { "content-type": mimeTypes[".html"], "cache-control": "public, max-age=300" });
+    res.writeHead(200, { "content-type": mimeTypes[".html"], "cache-control": "no-cache, must-revalidate" });
     if (req.method === "HEAD") {
       res.end();
       return;
@@ -710,9 +849,10 @@ const serveStatic = async (req, res) => {
   try {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) throw new Error("Not a file");
+    const isCodeAsset = [".js", ".css", ".html"].includes(extname(filePath));
     res.writeHead(200, {
       "content-type": mimeTypes[extname(filePath)] || "application/octet-stream",
-      "cache-control": "public, max-age=86400"
+      "cache-control": isCodeAsset ? "no-cache, must-revalidate" : "public, max-age=86400"
     });
     if (req.method === "HEAD") {
       res.end();
@@ -739,7 +879,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "GET" && req.url?.startsWith("/api/download")) {
+    if ((req.method === "GET" || req.method === "HEAD") && req.url?.startsWith("/api/download")) {
       await handleDownloadProxy(req, res);
       return;
     }

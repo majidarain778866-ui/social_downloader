@@ -1,6 +1,6 @@
-// GetintoDevice Chrome Extension - Service Worker (Manifest V3)
+// Social Downloader Chrome Extension - Service Worker (Manifest V3)
 
-const PRODUCTION_API_BASE = 'https://getintodevice.netlify.app';
+const PRODUCTION_API_BASE = 'https://socialdownloader.app';
 
 const getApiBase = async () => {
   const store = await chrome.storage.sync.get(['customApiBase', 'apiBaseUrl']);
@@ -9,7 +9,7 @@ const getApiBase = async () => {
 
 // Installation & Defaults Setup
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[GetintoDevice] Extension Service Worker initialized.');
+  console.log('[Social Downloader] Extension Service Worker initialized.');
 
   chrome.storage.sync.set({ apiBaseUrl: PRODUCTION_API_BASE });
 
@@ -20,19 +20,19 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // Create Right-Click Context Menu
   chrome.contextMenus.create({
-    id: 'getintodevice_download_media',
-    title: '⚡ Download with GetintoDevice',
+    id: 'socialdownloader_download_media',
+    title: '⚡ Download with Social Downloader',
     contexts: ['link', 'video', 'audio', 'image', 'page']
   });
 });
 
 // Handle Context Menu Clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'getintodevice_download_media') {
+  if (info.menuItemId === 'socialdownloader_download_media' || info.menuItemId === 'getintodevice_download_media') {
     const targetUrl = info.linkUrl || info.srcUrl || info.pageUrl;
     if (!targetUrl) return;
 
-    console.log('[GetintoDevice] Context menu download for:', targetUrl);
+    console.log('[Social Downloader] Context menu download for:', targetUrl);
 
     try {
       const apiBase = await getApiBase();
@@ -60,7 +60,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         });
       }
     } catch (err) {
-      console.warn('[GetintoDevice] Direct fetch fallback:', err);
+      console.warn('[Social Downloader] Direct fetch fallback:', err);
       chrome.downloads.download({
         url: targetUrl,
         saveAs: true

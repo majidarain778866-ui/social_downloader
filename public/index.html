@@ -32,7 +32,7 @@
     <link rel="alternate icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta property="og:image" content="__PAGE_CANONICAL__/og-preview.png" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=3.0.0" />
     <style id="theme-style">
       :root {
         --theme-a: __THEME_A__;
@@ -91,6 +91,9 @@
           </a>
         </div>
         <div class="topbar-actions">
+          <button id="theme-toggle-btn" class="theme-toggle-btn" type="button" aria-label="Toggle light and dark mode" title="Switch Theme">
+            <span class="material-symbols-outlined theme-icon" id="theme-icon">light_mode</span>
+          </button>
           <button id="pwa-install-btn" class="pwa-install-btn" type="button" aria-label="Install App" style="display: none;">
             <span class="material-symbols-outlined nav-icon">install_mobile</span>
             <span>Install App</span>
@@ -98,39 +101,128 @@
         </div>
       </nav>
 
+      <!-- Ad Slot: Header Leaderboard (728x90 / 320x50) -->
+      <div id="ad-slot-header" class="ad-slot-container ad-slot-header" aria-label="Advertisement">
+        <span class="ad-label">Advertisement</span>
+        <div class="ad-content-wrapper"></div>
+      </div>
+
       <section class="hero" id="tool">
         <div class="hero-copy">
-          <p class="eyebrow" id="page-eyebrow">__PAGE_EYEBROW__</p>
+          <div class="hero-badge">
+            <span class="badge-dot" aria-hidden="true"></span>
+            <span id="page-eyebrow">__PAGE_EYEBROW__</span>
+          </div>
           <h1 id="page-title">__PAGE_HERO_TITLE__</h1>
           <p class="subtitle" id="page-subtitle">
             __PAGE_HERO_SUBTITLE__
           </p>
         </div>
 
-        <form id="download-form" class="download-form glass-panel">
+        <form id="download-form" action="javascript:void(0);" method="POST" onsubmit="event.preventDefault(); return false;" class="download-form glass-panel">
           <label for="url-input" class="form-label">
             <span class="material-symbols-outlined label-icon">link</span>
-            <span>Media URL</span>
+            <span>Paste Media URL</span>
           </label>
           <div class="input-row">
             <div class="input-wrapper">
-              <span class="material-symbols-outlined search-icon">search</span>
+              <span class="material-symbols-outlined search-icon">link</span>
               <input
                 id="url-input"
                 name="url"
-                type="url"
+                type="text"
                 placeholder="__INPUT_PLACEHOLDER__"
                 autocomplete="off"
                 required
               />
+              <div class="input-actions-group">
+                <button type="button" id="btn-clear-url" class="input-action-btn clear-btn" aria-label="Clear link input" title="Clear input" style="display: none;">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+                <button type="button" id="btn-paste-url" class="input-action-btn paste-btn" aria-label="Paste link from clipboard" title="Paste link">
+                  <span class="material-symbols-outlined">content_paste</span>
+                  <span>Paste</span>
+                </button>
+              </div>
             </div>
-            <button id="fetch-button" type="submit">
-              <span class="material-symbols-outlined btn-icon">analytics</span>
-              <span>Analyze</span>
+            <button id="fetch-button" type="submit" class="fetch-cta-button">
+              <span class="material-symbols-outlined btn-icon">download</span>
+              <span>Download</span>
             </button>
           </div>
+
+          <!-- Supported Platform Quick Chips -->
+          <div class="hero-platform-chips" aria-label="Quick platform shortcuts">
+            <button type="button" class="platform-chip" data-platform="tiktok">
+              <span class="chip-dot" style="background: #00f2fe;"></span>
+              <span>TikTok</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="instagram">
+              <span class="chip-dot" style="background: #e1306c;"></span>
+              <span>Instagram</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="youtube">
+              <span class="chip-dot" style="background: #ff0000;"></span>
+              <span>YouTube</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="facebook">
+              <span class="chip-dot" style="background: #1877f2;"></span>
+              <span>Facebook</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="twitter">
+              <span class="chip-dot" style="background: #ffffff;"></span>
+              <span>X</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="threads">
+              <span class="chip-dot" style="background: #a855f7;"></span>
+              <span>Threads</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="pinterest">
+              <span class="chip-dot" style="background: #e60023;"></span>
+              <span>Pinterest</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="reddit">
+              <span class="chip-dot" style="background: #ff4500;"></span>
+              <span>Reddit</span>
+            </button>
+            <button type="button" class="platform-chip" data-platform="terabox">
+              <span class="chip-dot" style="background: #0ea5e9;"></span>
+              <span>TeraBox</span>
+            </button>
+          </div>
+
+          <!-- Hero Value Propositions -->
+          <div class="hero-value-props">
+            <div class="value-prop-item">
+              <span class="material-symbols-outlined">bolt</span>
+              <span>~3s Fast Fetch</span>
+            </div>
+            <div class="value-prop-item">
+              <span class="material-symbols-outlined">high_quality</span>
+              <span>1080p & 4K MP4</span>
+            </div>
+            <div class="value-prop-item">
+              <span class="material-symbols-outlined">music_note</span>
+              <span>320kbps MP3</span>
+            </div>
+            <div class="value-prop-item">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>No Watermark</span>
+            </div>
+            <div class="value-prop-item">
+              <span class="material-symbols-outlined">lock</span>
+              <span>100% Free & No Account</span>
+            </div>
+          </div>
+
           <p id="status" class="status" role="status"></p>
         </form>
+
+        <!-- Ad Slot: Below URL Form -->
+        <div id="ad-slot-below-form" class="ad-slot-container ad-slot-below-form" aria-label="Sponsored content">
+          <span class="ad-label">Sponsored</span>
+          <div class="ad-content-wrapper"></div>
+        </div>
       </section>
 
       <div id="loader" class="loader glass-panel" hidden>
@@ -155,9 +247,17 @@
 
       <section id="result" class="result command-center" hidden>
         <div class="preview-console glass-panel">
-          <div class="preview-media">
+          <div class="preview-media" id="preview-media-container" role="button" tabindex="0" title="Click to play video or preview">
             <video id="smart-preview" controls playsinline preload="metadata" hidden></video>
             <img id="thumbnail" alt="" />
+            <div id="preview-play-btn" class="preview-play-btn" aria-label="Play video preview">
+              <span class="material-symbols-outlined play-icon">play_arrow</span>
+              <span class="play-label">Preview Video</span>
+            </div>
+            <div id="preview-loading-spinner" class="preview-loading-spinner" style="display: none;">
+              <div class="spinner"></div>
+              <span>Loading preview...</span>
+            </div>
             <span id="platform-icon" class="platform-icon platform-generic" aria-hidden="true">SD</span>
           </div>
 
@@ -202,6 +302,12 @@
               <span>Open source</span>
             </a>
           </div>
+        </div>
+
+        <!-- Ad Slot: Above Download Buttons (High-Converting Spot) -->
+        <div id="ad-slot-download-results" class="ad-slot-container ad-slot-results" aria-label="Sponsored download">
+          <span class="ad-label">Sponsored Download</span>
+          <div class="ad-content-wrapper"></div>
         </div>
 
         <div class="primary-actions glass-panel" aria-label="Primary downloads">
@@ -260,6 +366,649 @@
           </div>
           <div id="options" class="options"></div>
         </details>
+      </section>
+
+      <!-- Problem Solved by This (Metrics Section) -->
+      <section class="metrics-section glass-panel" id="metrics-section">
+        <div class="section-header">
+          <p class="eyebrow">Real Performance</p>
+          <h2 class="section-title">Problem Solved by This</h2>
+          <p class="section-subtitle">
+            No bulky desktop apps, no sketchy software installers, no accounts or credit cards. Just paste the URL and get direct, clean media files in seconds.
+          </p>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-value">50+</div>
+            <div class="metric-label">Supported Platforms</div>
+            <div class="metric-desc">From Instagram & TikTok to Douyin, SoundCloud & TeraBox</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">~3s</div>
+            <div class="metric-label">Average Fetch Time</div>
+            <div class="metric-desc">Direct high-speed multi-threaded stream extraction</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">0</div>
+            <div class="metric-label">Sign-up Required</div>
+            <div class="metric-desc">100% anonymous, privacy-first, in-browser downloading</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">100%</div>
+            <div class="metric-label">Free & Unlimited</div>
+            <div class="metric-desc">No download limits, hidden paywalls, or quality locks</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recently Updated Across the Site -->
+      <section class="recently-updated-section glass-panel" id="recently-updated">
+        <div class="section-header">
+          <p class="eyebrow">Active Maintenance</p>
+          <h2 class="section-title">Recently Updated Across the Site</h2>
+          <p class="section-subtitle">
+            Platforms change their systems constantly. A few real, dated fixes pulled straight from individual tool pages, proof this is actively maintained, not shipped once and left alone:
+          </p>
+        </div>
+        <div class="updates-grid">
+          <article class="update-card">
+            <div class="update-card-top">
+              <span class="update-platform">
+                <span class="material-symbols-outlined" style="color: #e1306c;">camera_roll</span>
+                <span>Instagram</span>
+              </span>
+              <span class="update-badge badge-new">New</span>
+            </div>
+            <h3 class="update-title">Look Up Instagram Stories by Username</h3>
+            <div class="update-date">
+              <span class="material-symbols-outlined" style="font-size: 0.95rem;">event</span>
+              <span>13 October 2026</span>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-card-top">
+              <span class="update-platform">
+                <span class="material-symbols-outlined" style="color: #eab308;">filter_vintage</span>
+                <span>Snapchat</span>
+              </span>
+              <span class="update-badge badge-new">New</span>
+            </div>
+            <h3 class="update-title">Look Up Snapchat Stories by Username</h3>
+            <div class="update-date">
+              <span class="material-symbols-outlined" style="font-size: 0.95rem;">event</span>
+              <span>13 October 2026</span>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-card-top">
+              <span class="update-platform">
+                <span class="material-symbols-outlined" style="color: #00f2fe;">video_library</span>
+                <span>TikTok</span>
+              </span>
+              <span class="update-badge badge-new">New</span>
+            </div>
+            <h3 class="update-title">Look Up TikTok Stories by Username</h3>
+            <div class="update-date">
+              <span class="material-symbols-outlined" style="font-size: 0.95rem;">event</span>
+              <span>13 October 2026</span>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-card-top">
+              <span class="update-platform">
+                <span class="material-symbols-outlined" style="color: #0ea5e9;">cloud_download</span>
+                <span>TeraBox</span>
+              </span>
+              <span class="update-badge badge-fixed">Fixed</span>
+            </div>
+            <h3 class="update-title">Photo & File Downloads Working Again</h3>
+            <div class="update-date">
+              <span class="material-symbols-outlined" style="font-size: 0.95rem;">event</span>
+              <span>28 September 2026</span>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-card-top">
+              <span class="update-platform">
+                <span class="material-symbols-outlined" style="color: #e1306c;">audiotrack</span>
+                <span>Instagram</span>
+              </span>
+              <span class="update-badge badge-improved">Improved</span>
+            </div>
+            <h3 class="update-title">Full Support for Reels Original Audio & Enhanced Metadata</h3>
+            <div class="update-date">
+              <span class="material-symbols-outlined" style="font-size: 0.95rem;">event</span>
+              <span>19 September 2026</span>
+            </div>
+          </article>
+
+          <article class="update-card">
+            <div class="update-card-top">
+              <span class="update-platform">
+                <span class="material-symbols-outlined" style="color: #0ea5e9;">movie</span>
+                <span>TeraBox</span>
+              </span>
+              <span class="update-badge badge-new">New</span>
+            </div>
+            <h3 class="update-title">Downloads Now Save as Real MP4 Files</h3>
+            <div class="update-date">
+              <span class="material-symbols-outlined" style="font-size: 0.95rem;">event</span>
+              <span>1 September 2026</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- SUPPORTED MEDIA Section -->
+      <section class="supported-media-section glass-panel" id="supported-media">
+        <div class="section-header">
+          <p class="eyebrow">SUPPORTED MEDIA</p>
+          <h2 class="section-title">What you can save with Social Downloader</h2>
+          <p class="section-subtitle">
+            Public link formats we accept today — one paste field handles every platform below.
+          </p>
+        </div>
+        <div class="supported-media-grid">
+          <!-- 1. Instagram -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #e1306c;">camera_roll</span>
+                <h3>Instagram</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Reels</span>
+              <span class="media-tag-pill">Posts</span>
+              <span class="media-tag-pill">Stories</span>
+              <span class="media-tag-pill">IGTV</span>
+              <span class="media-tag-pill">Carousels</span>
+              <span class="media-tag-pill">Audio</span>
+            </div>
+            <p class="supported-media-desc">
+              Reels, public videos, feed posts, and reel audio from public profiles.
+            </p>
+          </article>
+
+          <!-- 2. Facebook -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #1877f2;">public</span>
+                <h3>Facebook</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Reels</span>
+              <span class="media-tag-pill">Photos</span>
+              <span class="media-tag-pill">GIFs</span>
+            </div>
+            <p class="supported-media-desc">
+              Public videos, reels, and watch links from Pages and public profiles.
+            </p>
+          </article>
+
+          <!-- 3. TikTok -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #00f2fe;">video_library</span>
+                <h3>TikTok</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Photo posts</span>
+              <span class="media-tag-pill">MP3</span>
+            </div>
+            <p class="supported-media-desc">
+              Public videos and photo posts from share links without watermark.
+            </p>
+          </article>
+
+          <!-- 4. Threads -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #a855f7;">forum</span>
+                <h3>Threads</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Posts</span>
+              <span class="media-tag-pill">Videos</span>
+            </div>
+            <p class="supported-media-desc">
+              Public video and image posts from threads.com or threads.net URLs.
+            </p>
+          </article>
+
+          <!-- 5. Bluesky -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #38bdf8;">cloud</span>
+                <h3>Bluesky</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Posts</span>
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Images</span>
+            </div>
+            <p class="supported-media-desc">
+              Public videos, images, and profile posts from bsky.app links.
+            </p>
+          </article>
+
+          <!-- 6. YouTube (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #ff0000;">play_circle</span>
+                <h3>YouTube</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Shorts</span>
+              <span class="media-tag-pill">Clips</span>
+            </div>
+            <p class="supported-media-desc">
+              Public Shorts and embeddable watch links (Beta — preview before you save).
+            </p>
+          </article>
+
+          <!-- 7. X / Twitter -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: var(--text-primary);">close</span>
+                <h3>X / Twitter</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Images</span>
+              <span class="media-tag-pill">GIFs</span>
+            </div>
+            <p class="supported-media-desc">
+              Public videos, images, and GIFs from x.com or twitter.com status links.
+            </p>
+          </article>
+
+          <!-- 8. Douyin -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #ec4899;">music_video</span>
+                <h3>Douyin</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Audio</span>
+              <span class="media-tag-pill">Images</span>
+              <span class="media-tag-pill">Notes</span>
+            </div>
+            <p class="supported-media-desc">
+              Public videos, MP3 audio, and image notes from douyin.com share links.
+            </p>
+          </article>
+
+          <!-- 9. SoundCloud -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #f97316;">graphic_eq</span>
+                <h3>SoundCloud</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Tracks</span>
+              <span class="media-tag-pill">Playlists</span>
+              <span class="media-tag-pill">Audio</span>
+            </div>
+            <p class="supported-media-desc">
+              Public tracks and playlist audio from soundcloud.com links.
+            </p>
+          </article>
+
+          <!-- 10. Dailymotion -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #0284c7;">smart_display</span>
+                <h3>Dailymotion</h3>
+              </div>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Audio</span>
+              <span class="media-tag-pill">MP3</span>
+            </div>
+            <p class="supported-media-desc">
+              Public videos from dailymotion.com or dai.ly — playlists, channels, live, private, and 18+ are refused.
+            </p>
+          </article>
+
+          <!-- 11. Xiaohongshu (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #ef4444;">auto_stories</span>
+                <h3>Xiaohongshu</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Photos</span>
+              <span class="media-tag-pill">Carousels</span>
+              <span class="media-tag-pill">Notes</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public xiaohongshu.com, rednote.com, or xhslink.com note link. Social Downloader extracts 1080p MP4 videos and full-resolution photo carousels without login.
+            </p>
+          </article>
+
+          <!-- 12. Weibo (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #eab308;">campaign</span>
+                <h3>Weibo</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Images</span>
+              <span class="media-tag-pill">Live Photos</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a weibo.com or t.cn post link. Save high-resolution 9-grid photo albums, 1080p MP4 videos, and live photos from public posts — no account required.
+            </p>
+          </article>
+
+          <!-- 13. Kuaishou (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #f97316;">videocam</span>
+                <h3>Kuaishou</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Photos</span>
+              <span class="media-tag-pill">Clips</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public kuaishou.com, v.kuaishou.com, or kwai.com link. Social Downloader fetches video streams and photo slides at source resolution without requiring a login.
+            </p>
+          </article>
+
+          <!-- 14. Reddit (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #ff4500;">reddit</span>
+                <h3>Reddit</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Audio</span>
+              <span class="media-tag-pill">Photos</span>
+              <span class="media-tag-pill">Galleries</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public reddit.com/r/… or redd.it link. Social Downloader extracts MP4 video with combined audio, standalone audio tracks, and photo galleries without login.
+            </p>
+          </article>
+
+          <!-- 15. Vimeo (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #06b6d4;">slideshow</span>
+                <h3>Vimeo</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Audio</span>
+              <span class="media-tag-pill">Embeds</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public vimeo.com or player.vimeo.com link. Social Downloader fetches progressive MP4 video streams up to 1080p with synchronized audio without software installs.
+            </p>
+          </article>
+
+          <!-- 16. VK (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #2563eb;">share</span>
+                <h3>VK</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Clips</span>
+              <span class="media-tag-pill">Photos</span>
+              <span class="media-tag-pill">Wall Posts</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public vkvideo.ru, vk.com/video, /clip, or /wall link. Social Downloader fetches progressive MP4 video streams up to 1080p and high-resolution photos.
+            </p>
+          </article>
+
+          <!-- 17. Twitch (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #9333ea;">sports_esports</span>
+                <h3>Twitch</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Clips</span>
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Highlights</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public clips.twitch.tv or twitch.tv/videos/ link. Social Downloader fetches direct progressive MP4 streams up to 1080p60 and HLS past broadcasts without software.
+            </p>
+          </article>
+
+          <!-- 18. Pinterest (Beta) -->
+          <article class="supported-media-card">
+            <div class="supported-media-top">
+              <div class="media-platform-brand">
+                <span class="material-symbols-outlined" style="color: #e60023;">bookmarks</span>
+                <h3>Pinterest</h3>
+              </div>
+              <span class="badge-beta">Beta</span>
+            </div>
+            <div class="supported-tags-row">
+              <span class="media-tag-pill">Videos</span>
+              <span class="media-tag-pill">Images</span>
+              <span class="media-tag-pill">GIFs</span>
+              <span class="media-tag-pill">Idea Pins</span>
+            </div>
+            <p class="supported-media-desc">
+              Paste a public pinterest.com or pin.it link. Social Downloader extracts direct 1080p MP4 videos, original quality PNG/JPG images, and GIFs without software or login.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Supported File Formats & Output Quality Table -->
+      <section class="format-table-section glass-panel" id="quality-matrix">
+        <div class="section-header">
+          <p class="eyebrow">Technical Specifications</p>
+          <h2 class="section-title">Supported File Formats & Output Quality</h2>
+          <p class="section-subtitle">
+            Engineered for high fidelity. See maximum resolutions, audio codecs, and watermark removal capabilities across our primary platforms.
+          </p>
+        </div>
+        <div class="format-table-wrapper">
+          <table class="format-table">
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Max Video Quality</th>
+                <th>Audio Format</th>
+                <th>Carousels / Photos</th>
+                <th>No Watermark</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>TikTok</strong></td>
+                <td>1080p Full HD MP4</td>
+                <td>320kbps MP3</td>
+                <td>Individual HD Slides</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> 100% Clean</span></td>
+              </tr>
+              <tr>
+                <td><strong>Instagram</strong></td>
+                <td>1080p 60fps MP4</td>
+                <td>Original M4A / MP3</td>
+                <td>Full Carousel Split</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Yes</span></td>
+              </tr>
+              <tr>
+                <td><strong>YouTube</strong></td>
+                <td>4K UHD / 1080p MP4</td>
+                <td>320kbps MP3</td>
+                <td>Max-Res Thumbnails</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Native Stream</span></td>
+              </tr>
+              <tr>
+                <td><strong>Facebook</strong></td>
+                <td>1080p HD MP4</td>
+                <td>High Bitrate MP3</td>
+                <td>Full Resolution Albums</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Yes</span></td>
+              </tr>
+              <tr>
+                <td><strong>X / Twitter</strong></td>
+                <td>1080p Progressive MP4</td>
+                <td>MP3 Audio</td>
+                <td>Multi-Image Grid</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Yes</span></td>
+              </tr>
+              <tr>
+                <td><strong>Threads</strong></td>
+                <td>1080p MP4</td>
+                <td>Stereo Audio</td>
+                <td>Original JPG/PNG</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Yes</span></td>
+              </tr>
+              <tr>
+                <td><strong>Pinterest</strong></td>
+                <td>1080p HD MP4</td>
+                <td>Integrated Track</td>
+                <td>Original PNG/JPG</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Yes</span></td>
+              </tr>
+              <tr>
+                <td><strong>Reddit</strong></td>
+                <td>1080p with Audio Merged</td>
+                <td>Standalone Audio</td>
+                <td>Galleries & GIFs</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Audio Sync</span></td>
+              </tr>
+              <tr>
+                <td><strong>TeraBox</strong></td>
+                <td>Real MP4 Files</td>
+                <td>Embedded Sound</td>
+                <td>Full Files & Photos</td>
+                <td><span class="table-badge-yes"><span class="material-symbols-outlined">check_circle</span> Working Fix</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Why Creators Need Social Downloader -->
+      <section class="why-creators-section glass-panel" id="why-creators">
+        <div class="section-header">
+          <p class="eyebrow">Built for Professionals</p>
+          <h2 class="section-title">Why Creators & Power Users Need Social Downloader</h2>
+          <p class="section-subtitle">
+            Whether you are repurposing content for multi-platform distribution, compiling video highlights, or saving audio samples.
+          </p>
+        </div>
+        <div class="features-pillars-grid">
+          <div class="pillar-card">
+            <div class="pillar-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
+              <span class="material-symbols-outlined">verified</span>
+            </div>
+            <h3>Pristine No-Watermark Media</h3>
+            <p>Direct CDN stream bypass pulls original MP4 video without distracting platform logos, allowing seamless repurposing for TikTok, Reels, and YouTube Shorts.</p>
+          </div>
+          <div class="pillar-card">
+            <div class="pillar-icon-box" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+              <span class="material-symbols-outlined">graphic_eq</span>
+            </div>
+            <h3>Pure MP3 Audio Extraction</h3>
+            <p>Save trending original audio, speech, background tracks, and music at 320kbps without needing cumbersome video editing or conversion tools.</p>
+          </div>
+          <div class="pillar-card">
+            <div class="pillar-icon-box" style="background: rgba(236, 72, 153, 0.15); color: #ec4899;">
+              <span class="material-symbols-outlined">collections</span>
+            </div>
+            <h3>Carousel & Photo Separation</h3>
+            <p>Automatically separates multi-item photo posts, slideshows, and stories into individual maximum-resolution images ready to save in 1 click.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tested Across All Your Daily Devices -->
+      <section class="devices-section glass-panel" id="devices-section">
+        <div class="section-header">
+          <p class="eyebrow">Cross-Platform Compatibility</p>
+          <h2 class="section-title">Tested From 4 Daily Devices</h2>
+          <p class="section-subtitle">
+            Engineered to work smoothly on whatever device you carry with zero installation required.
+          </p>
+        </div>
+        <div class="devices-grid">
+          <div class="device-card">
+            <span class="material-symbols-outlined device-icon" style="color: #a855f7;">phone_iphone</span>
+            <h4>iPhone & iPad</h4>
+            <p>Instant Safari downloads straight to iOS Files or Photos with zero external shortcuts needed.</p>
+          </div>
+          <div class="device-card">
+            <span class="material-symbols-outlined device-icon" style="color: #10b981;">smartphone</span>
+            <h4>Android</h4>
+            <p>One-tap downloads in Chrome, Samsung Internet, and Brave directly to your gallery folder.</p>
+          </div>
+          <div class="device-card">
+            <span class="material-symbols-outlined device-icon" style="color: #3b82f6;">laptop_mac</span>
+            <h4>Mac (macOS)</h4>
+            <p>Native speed in Safari, Chrome, and Arc with high-bitrate 4K stream decoding.</p>
+          </div>
+          <div class="device-card">
+            <span class="material-symbols-outlined device-icon" style="color: #06b6d4;">desktop_windows</span>
+            <h4>Windows PC</h4>
+            <p>Full support for Microsoft Edge, Chrome, and Firefox with keyboard shortcuts and instant saving.</p>
+          </div>
+        </div>
       </section>
 
       <section class="how-to-use glass-panel" id="how-to-use-section">
@@ -393,9 +1142,78 @@
         </div>
       </dialog>
 
+      <!-- Ad Slot: Sticky Bottom Anchor Bar -->
+      <aside id="ad-slot-sticky-bottom" class="ad-slot-container ad-slot-sticky-bottom" aria-label="Advertisement">
+        <div class="ad-sticky-bar-top">
+          <span class="ad-label">Advertisement</span>
+          <button class="ad-close-btn" type="button" aria-label="Hide advertisement">
+            <span class="material-symbols-outlined" style="font-size: 1rem;">close</span>
+            <span>Hide</span>
+          </button>
+        </div>
+        <div class="ad-content-wrapper"></div>
+      </aside>
+
+      <!-- Modern Branded Footer -->
+      <footer class="app-footer glass-panel" style="margin-top: 50px; padding: 40px 32px; text-align: center;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px;">
+          <span class="brand-mark" style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--btn-gradient); color: #fff; font-weight: 800; font-size: 0.95rem;">SD</span>
+          <span style="font-size: 1.4rem; font-weight: 800; font-family: var(--font-heading); color: var(--text-primary);">Social Downloader</span>
+        </div>
+        <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 20px; font-size: 0.95rem; line-height: 1.6;">
+          The all-in-one free online media downloader for content creators, video editors, and archivists worldwide. Extract pristine 4K & 1080p MP4 videos, 320kbps MP3 audio, and high-res photos without watermarks.
+        </p>
+        <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 24px;">
+          <a href="/tiktok-video-downloader">TikTok Downloader</a>
+          <a href="/instagram-reels-downloader">Instagram Downloader</a>
+          <a href="/youtube-shorts-downloader">YouTube Shorts</a>
+          <a href="/facebook-video-downloader">Facebook Video</a>
+          <a href="/twitter-video-downloader">X (Twitter)</a>
+          <a href="/pinterest-video-downloader">Pinterest</a>
+          <a href="/blog">Blog & Updates</a>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.82rem;">
+          © 2026 Social Downloader. All rights reserved. Fast, secure, and privacy-first social media extraction.
+        </p>
+      </footer>
+
+      <!-- Interactive Media Preview Modal -->
+      <div id="preview-modal" class="preview-modal" hidden aria-hidden="true">
+        <div class="preview-modal-backdrop" id="preview-modal-backdrop"></div>
+        <div class="preview-modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
+          <div class="preview-modal-header">
+            <div class="preview-modal-info">
+              <h3 id="preview-modal-title">Media Preview</h3>
+              <span id="preview-modal-badge" class="asset-badge asset-video">Best HD MP4</span>
+            </div>
+            <button type="button" id="preview-modal-close" class="preview-modal-close-btn" aria-label="Close preview">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="preview-modal-body">
+            <video id="preview-modal-video" controls playsinline preload="auto" hidden></video>
+            <audio id="preview-modal-audio" controls preload="auto" hidden></audio>
+            <img id="preview-modal-img" alt="Preview Image" hidden />
+            <div id="preview-modal-loader" class="preview-loading-spinner" style="display: none;">
+              <div class="spinner"></div>
+              <span>Buffering media...</span>
+            </div>
+          </div>
+          <div class="preview-modal-footer">
+            <a id="preview-modal-download-btn" class="download-link" href="#" target="_blank">
+              <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">download</span>
+              <span>Download This Asset</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
     </main>
 
-    <script src="/app.js?v=2.0.0" type="module"></script>
+    <!-- Ad Management Scripts -->
+    <script src="/ads-config.js"></script>
+    <script src="/ads.js" defer></script>
+    <script src="/app.js?v=3.0.0" type="module"></script>
   </body>
 </html>
 

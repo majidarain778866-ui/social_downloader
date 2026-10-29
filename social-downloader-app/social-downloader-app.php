@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: Social Downloader App
- * Plugin URI: https://getintodevice.netlify.app
+ * Plugin URI: https://socialdownloader.app
  * Description: Embed a fast, beautiful, glassmorphic social media video and audio downloader (supporting TikTok, Instagram, YouTube, Facebook, X, Pinterest, and 40+ more platforms) using the shortcode [social_downloader].
  * Version: 1.1.0
- * Author: Majid Arain
- * Author URI: https://getintodevice.netlify.app
+ * Author: Social Downloader Team
+ * Author URI: https://socialdownloader.app
  * License: GPL2
  */
 
@@ -42,8 +42,8 @@ if (!class_exists('SocialDownloaderApp')) {
 
         // Localize script to pass options dynamically from WordPress database
         wp_localize_script('psd-app', 'psdSettings', array(
-            'apiBase' => get_option('psd_api_base', 'https://getintodevice.netlify.app'),
-            'brandSuffix' => get_option('psd_brand_suffix', 'getintodevice.com'),
+            'apiBase' => get_option('psd_api_base', 'https://socialdownloader.app'),
+            'brandSuffix' => get_option('psd_brand_suffix', 'Social Downloader'),
             'enableYoutube' => get_option('psd_enable_youtube', '1'),
             'enableTiktok' => get_option('psd_enable_tiktok', '1'),
             'enableInstagram' => get_option('psd_enable_instagram', '1'),
@@ -104,8 +104,8 @@ if (!class_exists('SocialDownloaderApp')) {
             echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
         }
 
-        $api_base = get_option('psd_api_base', 'https://getintodevice.netlify.app');
-        $brand_suffix = get_option('psd_brand_suffix', 'getintodevice.com');
+        $api_base = get_option('psd_api_base', 'https://socialdownloader.app');
+        $brand_suffix = get_option('psd_brand_suffix', 'Social Downloader');
         $color_accent = get_option('psd_color_accent', '#8b5cf6');
         $color_grad_start = get_option('psd_color_grad_start', '#8b5cf6');
         $color_grad_end = get_option('psd_color_grad_end', '#d946ef');
@@ -147,14 +147,14 @@ if (!class_exists('SocialDownloaderApp')) {
                                 
                                 <div class="form-group">
                                     <label for="psd_api_base">API Base URL</label>
-                                    <input type="url" id="psd_api_base" name="psd_api_base" value="<?php echo esc_url($api_base); ?>" placeholder="https://getintodevice.netlify.app" class="regular-text" required />
-                                    <p class="description">Enter the URL of your live Netlify backend API deployment.</p>
+                                    <input type="url" id="psd_api_base" name="psd_api_base" value="<?php echo esc_url($api_base); ?>" placeholder="https://socialdownloader.app" class="regular-text" required />
+                                    <p class="description">Enter the URL of your live backend API deployment.</p>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="psd_brand_suffix">File Download Suffix</label>
-                                    <input type="text" id="psd_brand_suffix" name="psd_brand_suffix" value="<?php echo esc_attr($brand_suffix); ?>" placeholder="getintodevice.com" class="regular-text" required />
-                                    <p class="description">This string is appended to all downloaded filenames (e.g. video - getintodevice.com.mp4).</p>
+                                    <input type="text" id="psd_brand_suffix" name="psd_brand_suffix" value="<?php echo esc_attr($brand_suffix); ?>" placeholder="Social Downloader" class="regular-text" required />
+                                    <p class="description">This string is appended to all downloaded filenames (e.g. video - Social Downloader.mp4).</p>
                                 </div>
 
                                 <div class="form-group">

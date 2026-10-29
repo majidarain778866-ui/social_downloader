@@ -1,9 +1,11 @@
-const PRODUCTION_API_BASE = 'https://getintodevice.netlify.app';
+const PRODUCTION_API_BASE = 'https://socialdownloader.app';
+let currentApiBase = PRODUCTION_API_BASE;
 let activeTabUrl = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load saved settings & accent theme
-  const settings = await chrome.storage.sync.get(['enableFloatingButtons', 'accentColor']);
+  const settings = await chrome.storage.sync.get(['enableFloatingButtons', 'accentColor', 'customApiBase', 'apiBaseUrl']);
+  currentApiBase = settings.customApiBase || settings.apiBaseUrl || PRODUCTION_API_BASE;
   
   if (settings.accentColor) {
     applyThemeAccent(settings.accentColor, false);
@@ -217,8 +219,9 @@ async function triggerFetchMedia(url) {
   btnFetch.disabled = true;
 
   try {
-    const stored = await chrome.storage.sync.get(['customApiBase']);
-    const apiBase = stored.customApiBase || PRODUCTION_API_BASE;
+    const stored = await chrome.storage.sync.get(['customApiBase', 'apiBaseUrl']);
+    const apiBase = stored.customApiBase || stored.apiBaseUrl || currentApiBase || PRODUCTION_API_BASE;
+    currentApiBase = apiBase;
     const response = await fetch(`${apiBase}/api/video-info`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -231,7 +234,7 @@ async function triggerFetchMedia(url) {
     }
 
     const data = await response.json();
-    renderMediaResultCard(data, url);
+    renderMediaResultCard(data, url, apiBase);
 
     trackAnalyticsEvent('video_fetch_success', { platform: data.platform || 'general' });
   } catch (error) {
@@ -244,7 +247,8 @@ async function triggerFetchMedia(url) {
 }
 
 // Render Result Card Formats (Supports Video, Audio, and Multi-Photo Carousels)
-function renderMediaResultCard(data, sourceUrl) {
+function renderMediaResultCard(data, sourceUrl, activeApiBase) {
+  const apiBase = activeApiBase || currentApiBase || PRODUCTION_API_BASE;
   const resultCard = document.getElementById('resultCard');
   const resThumbnail = document.getElementById('resThumbnail');
   const resDuration = document.getElementById('resDuration');
@@ -255,7 +259,7 @@ function renderMediaResultCard(data, sourceUrl) {
   resThumbnail.src = data.thumbnail || 'icons/icon128.png';
   resDuration.textContent = data.duration || 'HD Media';
   resTitle.textContent = data.title || 'Social Media Asset';
-  resAuthor.textContent = data.creator?.name ? `@${data.creator.name}` : (data.author ? `@${data.author}` : 'GetintoDevice Verified Link');
+  resAuthor.textContent = data.creator?.name ? `@${data.creator.name}` : (data.author ? `@${data.author}` : 'Social Downloader Verified Link');
 
   formatList.innerHTML = '';
   const downloads = data.downloads || [];
@@ -288,9 +292,31 @@ function renderMediaResultCard(data, sourceUrl) {
 
       const dlBtn = item.querySelector('.btn-download-format');
       dlBtn.addEventListener('click', () => {
-        const downloadUrl = fmt.download_url
-          ? (fmt.download_url.startsWith('http') ? fmt.download_url : `${apiBase}${fmt.download_url}`)
-          : (fmt.url.startsWith('http') ? fmt.url : `${apiBase}${fmt.url}`);
+        const rawTarget = fmt.download_url || fmt.url || '';
+        if (!rawTarget) {
+          alert('Download target URL is missing.');
+          return;
+        }
+        const downloadUrl = rawTarget.startsWith('http') ? rawTarget : `${apiBase}${rawTarget}`;
+        
+        const ext = fmt.extension || fmt.ext || (isAudio ? 'mp3' : isImage ? 'jpg' : 'mp4');
+        const filename = `${safeFileName(data.title || 'media')}.${ext}`;
+
+        chrome.downloads.download({
+          url: downloadUrl,
+          filename: filename,
+          saveAs: true
+        });
+
+        saveHistoryItem({
+          title: data.title || 'Social Asset',
+          thumbnail: data.thumbnail,
+          url: downloadUrl,
+          filename: filename,
+          format: labelText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+      });
         
         const ext = fmt.extension || fmt.ext || (isAudio ? 'mp3' : isImage ? 'jpg' : 'mp4');
         const filename = `${safeFileName(data.title || 'media')}.${ext}`;

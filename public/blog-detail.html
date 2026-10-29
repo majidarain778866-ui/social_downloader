@@ -31,7 +31,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=3.0.0" />
     <style id="theme-style">
       :root {
         --theme-a: __THEME_A__;
@@ -97,6 +97,12 @@
         </div>
       </nav>
 
+      <!-- Ad Slot: Header Leaderboard (728x90 / 320x50) -->
+      <div id="ad-slot-header" class="ad-slot-container ad-slot-header" aria-label="Advertisement">
+        <span class="ad-label">Advertisement</span>
+        <div class="ad-content-wrapper"></div>
+      </div>
+
       <article class="blog-content-wrapper glass-panel">
         <header class="blog-article-header">
           <div class="blog-article-meta">
@@ -113,6 +119,12 @@
         <section class="blog-article-body">
           __BLOG_CONTENT__
         </section>
+
+        <!-- Ad Slot: Below Article Content -->
+        <div id="ad-slot-below-form" class="ad-slot-container" style="margin: 32px auto 0;" aria-label="Sponsored content">
+          <span class="ad-label">Sponsored</span>
+          <div class="ad-content-wrapper"></div>
+        </div>
 
         <!-- CTA Box to tool -->
         <section class="glass-panel" style="padding: 32px; border-radius: 16px; margin-top: 48px; border: 1px solid var(--theme-accent); text-align: center;">
@@ -147,8 +159,22 @@
           <span>Blog</span>
         </a>
       </nav>
+      <!-- Ad Slot: Sticky Bottom Anchor Bar -->
+      <aside id="ad-slot-sticky-bottom" class="ad-slot-container ad-slot-sticky-bottom" aria-label="Advertisement">
+        <div class="ad-sticky-bar-top">
+          <span class="ad-label">Advertisement</span>
+          <button class="ad-close-btn" type="button" aria-label="Hide advertisement">
+            <span class="material-symbols-outlined" style="font-size: 1rem;">close</span>
+            <span>Hide</span>
+          </button>
+        </div>
+        <div class="ad-content-wrapper"></div>
+      </aside>
     </main>
 
-    <script src="/app.js?v=1.0.1" type="module"></script>
+    <!-- Ad Management Scripts -->
+    <script src="/ads-config.js"></script>
+    <script src="/ads.js" defer></script>
+    <script src="/app.js?v=3.0.0" type="module"></script>
   </body>
 </html>

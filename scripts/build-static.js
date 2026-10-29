@@ -8,7 +8,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const rootDir = join(__dirname, "..");
 const publicDir = join(rootDir, "public");
 const distDir = join(rootDir, "dist");
-const siteUrl = (process.env.SITE_URL || "https://getintodevice.netlify.app").replace(/\/+$/, "");
+const siteUrl = (process.env.SITE_URL || "https://socialdownloader.app").replace(/\/+$/, "");
 const publicApiBase = (process.env.PUBLIC_API_BASE || "").replace(/\/+$/, "");
 
 const seoPages = {};

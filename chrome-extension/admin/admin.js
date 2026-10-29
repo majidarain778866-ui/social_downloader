@@ -1,6 +1,6 @@
-// GetintoDevice Admin Dashboard Controller
+// Social Downloader Admin Dashboard Controller
 
-const PRODUCTION_API_BASE = 'https://getintodevice.netlify.app';
+const PRODUCTION_API_BASE = 'https://socialdownloader.app';
 
 document.addEventListener('DOMContentLoaded', async () => {
   setupAdminNavigation();
@@ -246,7 +246,7 @@ async function exportLogsToCsv() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `GetintoDevice_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `Social_Downloader_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
 }
 

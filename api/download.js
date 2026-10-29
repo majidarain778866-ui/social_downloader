@@ -74,8 +74,8 @@ export default async function handler(req, res) {
 
     // Prevent HTML web pages or JSON error responses from being sent as .mp4 downloads
     if (contentType.toLowerCase().includes("text/html") || contentType.toLowerCase().includes("application/json")) {
-      console.warn(`[Download] Upstream returned non-media content-type: ${contentType}. Redirecting to source.`);
-      return res.redirect(302, targetUrl);
+      console.warn(`[Download] Upstream returned non-media content-type: ${contentType}.`);
+      return res.status(502).json({ error: "Direct media stream could not be loaded. Please re-fetch and try another resolution." });
     }
 
     res.status(200);

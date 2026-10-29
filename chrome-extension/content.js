@@ -1,7 +1,7 @@
-// GetintoDevice Site Overlay Floating Download Button Content Script
+// Social Downloader Site Overlay Floating Download Button Content Script
 
 (function () {
-  'use me strict';
+  'use strict';
 
   let enabled = true;
 
@@ -100,10 +100,12 @@
         const data = response.data;
         const apiBase = response.apiBase || 'http://localhost:3000';
         const primary = data.downloads?.[0];
+        const rawUrl = primary?.download_url || primary?.url;
 
-        if (primary && primary.url) {
-          const downloadUrl = primary.url.startsWith('http') ? primary.url : `${apiBase}${primary.url}`;
-          const filename = `${safeFileName(data.title || 'media')}.${primary.ext || 'mp4'}`;
+        if (primary && rawUrl) {
+          const downloadUrl = rawUrl.startsWith('http') ? rawUrl : `${apiBase}${rawUrl}`;
+          const ext = primary.extension || primary.ext || 'mp4';
+          const filename = `${safeFileName(data.title || 'media')}.${ext}`;
 
           chrome.runtime.sendMessage({
             action: 'TRIGGER_DOWNLOAD',
@@ -130,7 +132,7 @@
         <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M12 16l4-5h-3V4h-2v7H8l4 5zm-7 2h14v2H5v-2z"/></svg>
       </div>
       <div>
-        <div style="font-weight: 700; font-size: 13px;">GetintoDevice</div>
+        <div style="font-weight: 700; font-size: 13px;">Social Downloader</div>
         <div style="font-size: 12px; opacity: 0.85;">${message}</div>
       </div>
     `;
