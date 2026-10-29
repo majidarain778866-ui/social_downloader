@@ -6,9 +6,7 @@
   directory = "netlify/functions"
   timeout = 26
   included_files = [
-    "netlify/functions/python/**",
-    "netlify/functions/bin/**",
-    "cookies.txt"
+    "netlify/functions/bin/**"
   ]
 
 [[headers]]

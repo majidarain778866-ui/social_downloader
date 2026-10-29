@@ -1,16 +1,14 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run netlify:prepare:linux && npm run build",
   "outputDirectory": "dist",
   "functions": {
     "api/download.js": {
       "includeFiles": "netlify/functions/bin/**",
-      "memory": 1024,
-      "maxDuration": 60
+      "memory": 1024
     },
     "api/video-info.js": {
       "includeFiles": "netlify/functions/bin/**",
-      "memory": 1024,
-      "maxDuration": 60
+      "memory": 1024
     }
   }
 }
