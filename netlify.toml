@@ -4,10 +4,8 @@
 
 [functions]
   directory = "netlify/functions"
-  timeout = 26
-  included_files = [
-    "netlify/functions/bin/**"
-  ]
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/bin/**"]
 
 [[headers]]
   for = "/api/*"
