@@ -634,8 +634,10 @@ const qualityScore = (format) => {
   const height = Number(format.height || 0);
   const width = Number(format.width || 0);
   const isMp4 = String(format.ext || "").toLowerCase() === "mp4";
-  const mp4Bonus = isMp4 ? 50000 : 0;
-  const audioBonus = hasAudio(format) ? 10000 : 0;
+  const isWebm = String(format.ext || "").toLowerCase() === "webm";
+  // Substantially boost MP4 and penalize WebM so users always get clean MP4 videos
+  const mp4Bonus = isMp4 ? 50000000 : (isWebm ? -10000000 : 0);
+  const audioBonus = hasAudio(format) ? 20000000 : 0;
   return height * 1000000 + width * 1000 + mp4Bonus + audioBonus + Number(format.tbr || 0) + Number(format.filesize || format.filesize_approx || 0) / 1000000;
 };
 
@@ -899,26 +901,28 @@ const buildPrimaryActions = (downloads, { sourceUrl, title, strategy }) => {
   const directHigh =
     pickPlayableVideo(completeVideos, { mp4Only: true, maxHeight: isNetlifyRuntime ? 1080 : Number.POSITIVE_INFINITY }) ||
     pickPlayableVideo(completeVideos, { mp4Only: true }) ||
-    pickPlayableVideo(completeVideos) ||
     pickPlayableVideo(videos, { mp4Only: true }) ||
+    pickPlayableVideo(completeVideos) ||
     pickPlayableVideo(videos);
 
   const directNormal =
     pickPlayableVideo(completeVideos.filter((item) => item !== directHigh), { mp4Only: true, maxHeight: 720 }) ||
+    pickPlayableVideo(videos.filter((item) => item !== directHigh), { mp4Only: true, maxHeight: 720 }) ||
     completeVideos.find((item) => item !== directHigh && maxResolutionSide(item) <= 720) ||
     completeVideos.find((item) => item !== directHigh && /360|480|540|normal|medium/i.test([item.label, item.resolution].join(" "))) ||
-    pickPlayableVideo(videos.filter((item) => item !== directHigh), { mp4Only: true, maxHeight: 720 }) ||
     pickPlayableVideo(videos.filter((item) => item !== directHigh), { maxHeight: 720 });
 
-  const directHighRes = directHigh ? maxResolutionSide(directHigh) : 0;
-  const needMergedHigh = (!directHigh || directHighRes < 720) && Boolean(sourceUrl);
-  const mergedHigh = sourceUrl ? cacheMergedDownload({ sourceUrl, title, quality: "high", strategy }) : null;
-  const mergedNormal = sourceUrl ? cacheMergedDownload({ sourceUrl, title, quality: "normal", strategy }) : null;
+  // Prioritize direct playable MP4 so that Netlify / WordPress can download instantly via direct high-speed CDN
+  const mergedHigh = (!directHigh && sourceUrl) ? cacheMergedDownload({ sourceUrl, title, quality: "high", strategy }) : null;
+  const mergedNormal = (!directNormal && sourceUrl) ? cacheMergedDownload({ sourceUrl, title, quality: "normal", strategy }) : null;
 
   const highQuality =
-    (needMergedHigh && mergedHigh)
-      ? mergedHigh
-      : (directHigh || mergedHigh || downloads.find((item) => item.type !== "audio") || downloads[0] || null);
+    directHigh ||
+    mergedHigh ||
+    downloads.find((item) => item.type === "video") ||
+    downloads.find((item) => item.type !== "audio") ||
+    downloads[0] ||
+    null;
 
   const normalQuality =
     directNormal ||

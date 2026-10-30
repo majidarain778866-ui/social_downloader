@@ -42,7 +42,25 @@ const btnPasteUrl = document.querySelector("#btn-paste-url");
 const platformChips = document.querySelectorAll(".platform-chip");
 
 const pageKey = document.documentElement.dataset.pageKey?.includes("__") ? "home" : document.documentElement.dataset.pageKey || "home";
-const configuredApiBase = String(window.SOCIAL_DOWNLOADER_API_BASE || "").replace(/\/+$/, "");
+
+// Universal API Base Resolver:
+// Works on localhost, Netlify, and when uploaded to WordPress public_html/dist/
+const DEFAULT_REMOTE_API = "https://social-downloader-pro.netlify.app";
+const getApiBase = () => {
+  if (window.SOCIAL_DOWNLOADER_API_BASE) {
+    return String(window.SOCIAL_DOWNLOADER_API_BASE).replace(/\/+$/, "");
+  }
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+  const isServerless = host.endsWith("netlify.app") || host.endsWith("vercel.app");
+  if (isLocal || isServerless) {
+    return "";
+  }
+  // When hosted inside WordPress or other external host, use the live backend
+  return DEFAULT_REMOTE_API;
+};
+
+const configuredApiBase = getApiBase();
 let loaderTimer = null;
 let activeFilter = "all";
 let currentDownloads = [];
@@ -798,15 +816,6 @@ const analyzeMedia = async (explicitUrl = null) => {
     input.value = url;
     if (btnClearUrl) btnClearUrl.style.display = "inline-flex";
   }
-
-  // Update browser address bar without reload
-  try {
-    const currentUrl = new URL(window.location.href);
-    if (currentUrl.searchParams.get("url") !== url) {
-      currentUrl.searchParams.set("url", url);
-      window.history.replaceState({ url }, "", currentUrl.toString());
-    }
-  } catch {}
 
   setLoading(true, "Analyzing media link...", "Connecting to platform and extracting HD formats");
   startProcessLoader();

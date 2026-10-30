@@ -270,49 +270,30 @@ const handleDownload = async (req) => {
 
   if (!id) return json({ error: "A valid cached download ID is required." }, 400);
   if (!cached) return json({ error: "This download link expired. Fetch the video again." }, 404);
-  if (cached.requiresYtDlp) {
-    if (cached.url && isHttpUrl(cached.url) && cached.url !== cached.sourceUrl) {
-      // Has direct media URL candidate, continue to proxy/redirect
-    } else {
-      try {
-        return await streamYtDlpDownload(cached, inline);
-      } catch (dlErr) {
-        console.error("streamYtDlpDownload failed:", dlErr.message);
-        if (cached.url && isHttpUrl(cached.url) && cached.url !== cached.sourceUrl) {
-          return Response.redirect(cached.url, 302);
-        }
-        return json({ error: dlErr?.message || "Download processing failed." }, 500);
-      }
-    }
-  }
-  if (!cached.url || !isHttpUrl(cached.url)) return json({ error: "A valid download URL is required." }, 400);
 
-  const upstream = await fetch(cached.url, {
-    headers: cached.headers,
-    redirect: "follow"
-  });
-
-  if (!upstream.ok || !upstream.body) {
-    // If proxy fails due to IP block or 403, fallback to direct redirect
+  // If a direct CDN media URL is available, 302 redirect directly!
+  // This completely bypasses Netlify / AWS Lambda's 6MB payload limit and 10s timeout,
+  // letting mobile and desktop browsers download directly from the platform CDN at full speed!
+  if (cached.url && isHttpUrl(cached.url) && cached.url !== cached.sourceUrl) {
     return Response.redirect(cached.url, 302);
   }
 
-  const contentType = upstream.headers.get("content-type") || "application/octet-stream";
-  if (contentType.toLowerCase().includes("text/html") || contentType.toLowerCase().includes("application/json")) {
-    return json({ error: "Direct media stream could not be loaded. Please re-fetch and try another resolution." }, 502);
-  }
-  const rawExt = (extensionFromContentType(contentType, cached.url) || `.${cached.ext || "mp4"}`).replace(/^\./, "");
-  let baseName = String(cached.filename || "download").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim().replace(/\.+$/, "");
-  const knownExtRegex = /\.(mp4|mp3|m4a|webm|jpg|jpeg|png|webp)$/i;
-  const finalName = knownExtRegex.test(baseName) ? baseName : `${baseName}.${cached.ext || rawExt || "mp4"}`;
-
-  return new Response(upstream.body, {
-    headers: {
-      ...headers,
-      "content-type": contentType,
-      "content-disposition": contentDisposition(finalName, inline)
+  // Only run yt-dlp on serverless if strictly required (e.g. YouTube stream merging / audio extraction)
+  if (cached.requiresYtDlp) {
+    try {
+      return await streamYtDlpDownload(cached, inline);
+    } catch (dlErr) {
+      console.error("streamYtDlpDownload failed:", dlErr.message);
+      if (cached.url && isHttpUrl(cached.url)) {
+        return Response.redirect(cached.url, 302);
+      }
+      return json({ error: dlErr?.message || "Download processing failed." }, 500);
     }
-  });
+  }
+
+  if (!cached.url || !isHttpUrl(cached.url)) return json({ error: "A valid download URL is required." }, 400);
+
+  return Response.redirect(cached.url, 302);
 };
 
 export default async (req) => {

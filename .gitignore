@@ -27,6 +27,7 @@ test_output.f140.m4a
 test_download.f137.mp4.part
 # Standalone credentials and logs
 cookies.txt
+*cookies*.txt
 cookies/
 test_combined.js
 test_details_parsing.js
