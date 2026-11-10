@@ -1955,3 +1955,309 @@ button[type="submit"] .btn-icon {
   }
 }
 
+
+
+/* ==========================================================================
+   WORDPRESS PRO EXTENSIONS (INPUT ACTIONS, CHIPS, PREVIEW MODAL, TOAST, ADS)
+   ========================================================================== */
+
+.psd-app-shell {
+  font-family: var(--font-body);
+  position: relative;
+  border-radius: 24px;
+  margin: 32px 0;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  padding: 48px 24px;
+  background: var(--bg-space);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.psd-app-shell * {
+  box-sizing: border-box;
+}
+
+.psd-hero-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.psd-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: var(--theme-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.psd-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--theme-accent);
+  box-shadow: 0 0 10px var(--theme-accent);
+}
+
+.psd-main-title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.02em;
+}
+
+.psd-main-subtitle {
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+  color: var(--text-secondary);
+  max-width: 650px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Input Actions: Clear & Paste */
+.input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  height: 56px;
+  padding: 0 130px 0 46px !important;
+  border-radius: 12px;
+  border: 1px solid var(--border-glass);
+  background: rgba(5, 3, 14, 0.6);
+  color: var(--text-primary);
+  outline: none;
+  font-size: 0.95rem;
+  transition: var(--transition);
+}
+
+.input-actions-group {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 5;
+}
+
+.input-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: var(--transition);
+}
+
+.input-action-btn:hover {
+  background: var(--theme-accent);
+  color: #fff;
+  border-color: var(--theme-accent);
+}
+
+.input-action-btn span.material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.fetch-cta-button {
+  height: 56px;
+  padding: 0 28px;
+  border-radius: 12px;
+  background: var(--theme-button);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  transition: var(--transition);
+}
+
+.fetch-cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--theme-accent) 45%, transparent);
+}
+
+/* Supported Platform Chips */
+.hero-platform-chips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.platform-chip:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  border-color: var(--theme-accent);
+  transform: translateY(-1px);
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* Ad slots */
+.psd-ad-container {
+  margin: 22px auto;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* Preview Modal */
+.preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.preview-modal[hidden] {
+  display: none !important;
+}
+
+.preview-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.preview-modal-content {
+  position: relative;
+  z-index: 2;
+  background: #0f0b23;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 700px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+}
+
+.preview-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.preview-modal-close:hover {
+  background: #ef4444;
+}
+
+#preview-modal-title {
+  margin: 0 0 16px 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: #fff;
+  padding-right: 40px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Toast */
+.psd-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  color: #fff;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  z-index: 9999999;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.psd-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .psd-app-shell {
+    padding: 30px 14px;
+    border-radius: 16px;
+  }
+  .input-wrapper input {
+    height: 50px;
+    font-size: 0.88rem;
+    padding-right: 115px !important;
+  }
+  .fetch-cta-button {
+    height: 50px;
+    padding: 0 18px;
+    font-size: 0.92rem;
+  }
+  .input-action-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+}
