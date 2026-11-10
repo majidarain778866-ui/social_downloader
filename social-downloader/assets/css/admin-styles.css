@@ -1,0 +1,315 @@
+/* 
+  =========================================
+  SOCIAL DOWNLOADER - WP ADMIN STYLES
+  =========================================
+*/
+
+.psd-admin-wrap {
+  margin: 20px 20px 0 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f8fafc;
+}
+
+.psd-admin-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: #090614;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.psd-admin-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 24px;
+  margin-bottom: 30px;
+}
+
+.psd-admin-header h1 {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.psd-admin-header .subtitle {
+  color: #94a3b8;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #8b5cf6, #d946ef);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+}
+
+/* Grid Layout */
+.psd-admin-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 30px;
+}
+
+/* Card design */
+.psd-card {
+  background: rgba(15, 11, 35, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.psd-card h2, .psd-card h3 {
+  font-family: 'Outfit', sans-serif;
+  color: #fff;
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+.psd-card h2 {
+  font-size: 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+.psd-card h3 {
+  font-size: 1.15rem;
+}
+
+.section-intro {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+/* Form Styling */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f8fafc;
+  margin-bottom: 8px;
+}
+
+.form-group input[type="url"],
+.form-group input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  height: 44px;
+  background: rgba(5, 3, 14, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  padding: 0 12px !important;
+  outline: none !important;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+}
+
+.description {
+  color: #64748b;
+  font-size: 0.85rem !important;
+  margin-top: 6px !important;
+}
+
+/* Color pickers grid */
+.color-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.color-picker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-picker-item label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #f8fafc;
+}
+
+/* WP Color picker override */
+.wp-picker-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Submit Button */
+.psd-submit-btn {
+  height: 46px !important;
+  padding: 0 28px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #8b5cf6, #d946ef) !important;
+  border: none !important;
+  color: #fff !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.25) !important;
+  transition: all 0.3s ease !important;
+}
+
+.psd-submit-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Status Indicator */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-dot.pinging {
+  background: #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
+  animation: pulse 1s infinite alternate;
+}
+
+.status-dot.online {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.status-dot.offline {
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+}
+
+@keyframes pulse {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+/* Shortcode embed guide box */
+.psd-shortcode-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 3, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 12px 0 16px 0;
+}
+
+.psd-shortcode-box code {
+  background: transparent !important;
+  color: #8b5cf6 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  padding: 0 !important;
+}
+
+.psd-copy-shortcode {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #fff;
+  padding: 4px 10px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.psd-copy-shortcode:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #8b5cf6;
+}
+
+/* Sidebar media queries */
+@media (max-width: 820px) {
+  .psd-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Checkbox groups */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #8b5cf6;
+  cursor: pointer;
+}
+
+/* Textarea overrides */
+.code-textarea {
+  width: 100%;
+  background: rgba(5, 3, 14, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 0.9rem !important;
+  padding: 12px !important;
+  resize: vertical !important;
+  outline: none !important;
+  transition: all 0.3s ease;
+}
+
+.code-textarea:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+}
